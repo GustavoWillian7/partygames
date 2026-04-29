@@ -1,0 +1,8 @@
+export const ROOM_CODE_LENGTH = 4;
+export const DEFAULT_MAX_PLAYERS = 8;
+export const DEFAULT_ROUND_TIME_SECONDS = 60;
+export const RECONNECTION_TIMEOUT_SECONDS = 60;
+export const EMPTY_ROOM_DESTROY_DELAY_SECONDS = 30;
+export const MIN_PLAYERS_TO_START = 3;
+
+export const IMPOSTOR_ROUNDS = 2;
