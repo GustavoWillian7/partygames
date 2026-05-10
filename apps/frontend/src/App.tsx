@@ -1,12 +1,23 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import AuthPage from './pages/AuthPage';
+import HomePage from './pages/HomePage';
+import RoomPage from './pages/RoomPage';
+import ImpostorGamePage from './pages/ImpostorGamePage';
+import DuoChaosGamePage from './pages/DuoChaosGamePage';
+
 function App() {
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background text-text">
-      <div className="text-center">
-        <h1 className="text-4xl font-bold text-primary mb-4">PartyGames</h1>
-        <p className="text-muted">A plataforma de party games multiplayer.</p>
-      </div>
-    </div>
-  )
+    <BrowserRouter>
+      <Routes>
+        <Route path="/auth" element={<AuthPage />} />
+        <Route path="/" element={<HomePage />} />
+        <Route path="/room/:roomId" element={<RoomPage />} />
+        <Route path="/game/impostor" element={<ImpostorGamePage />} />
+        <Route path="/game/duo-chaos" element={<DuoChaosGamePage />} />
+        <Route path="*" element={<Navigate to="/auth" replace />} />
+      </Routes>
+    </BrowserRouter>
+  );
 }
 
-export default App
+export default App;

@@ -1,7 +1,7 @@
 # PartyGames — Bíblia do Projeto
 
 > Documento vivo. Atualizar a cada decisão arquitetural, mudança de stack ou novo jogo.
-> Versão: 1.0.0 — 2026-04-29
+> Versão: 1.1.0 — 2026-05-10
 
 ---
 
@@ -158,64 +158,90 @@ frontend/
 └── package.json
 ```
 
-### 4.2 Back-end (`/backend`)
+### 4.2 Back-end (`/backend`) — Implementado
 
 ```
 backend/
 ├── src/
-│   ├── index.ts                # Entry point: inicializa Express + Socket.io
+│   ├── index.ts                # Entry point: Express + Socket.io + MongoDB
 │   ├── config/                 # Variáveis de ambiente, conexões
 │   │   ├── env.ts
-│   │   ├── redis.ts
-│   │   └── mongo.ts
-│   │
-│   ├── types/                  # Tipagens internas compartilhadas
-│   │   └── index.ts
+│   │   ├── redis.ts            # Cliente ioredis (pub/sub + estado)
+│   │   └── mongo.ts            # Conexão Mongoose (preparada, não usada ainda)
 │   │
 │   ├── middleware/             # Express middlewares
 │   │   ├── errorHandler.ts
-│   │   ├── authMiddleware.ts
-│   │   └── validateRequest.ts  # Integração Zod + Express
+│   │   ├── authMiddleware.ts   # Validação JWT REST
+│   │   └── validateRequest.ts  # Zod + Express
 │   │
-│   ├── modules/                # Cada módulo = domínio isolado
+│   ├── modules/                # Domínios isolados
 │   │   ├── auth/
 │   │   │   ├── auth.controller.ts
 │   │   │   ├── auth.routes.ts
-│   │   │   ├── auth.service.ts
+│   │   │   ├── auth.service.ts  # ⚠️ Usa Map em memória (MVP)
 │   │   │   └── auth.schema.ts
 │   │   │
-│   │   ├── room/
-│   │   │   ├── room.handler.ts     # Socket.io handler
-│   │   │   ├── room.service.ts
-│   │   │   ├── room.schema.ts
-│   │   │   └── room.types.ts
-│   │   │
-│   │   ├── impostor/
-│   │   │   ├── impostor.handler.ts
-│   │   │   ├── impostor.service.ts
-│   │   │   ├── impostor.schema.ts
-│   │   │   ├── impostor.types.ts
-│   │   │   └── impostor.logic.ts   # Regras puras do jogo
-│   │   │
-│   │   └── duo-chaos/
-│   │       ├── duo-chaos.handler.ts
-│   │       ├── duo-chaos.service.ts
-│   │       ├── duo-chaos.schema.ts
-│   │       ├── duo-chaos.types.ts
-│   │       └── duo-chaos.logic.ts
+│   │   └── room/               # ✅ Sala completa (CRUD + socket)
+│   │       ├── room.handler.ts     # Socket.io handler (criar, entrar, sair, kick, settings, start)
+│   │       ├── room.service.ts    # Regras + Redis persistence + timers
+│   │       ├── room.schema.ts
+│   │       └── room.types.ts
 │   │
-│   ├── shared/                 # Utilitários e contratos compartilhados
-│   │   ├── constants/
-│   │   ├── utils/
-│   │   └── types/
+│   ├── events/
+│   │   └── socketEvents.ts     # Registro central + handshake JWT + reconexão
 │   │
-│   └── events/                 # Registro central de eventos Socket.io
-│       └── socketEvents.ts
+│   └── socketRegistry.ts        # Mapa socketId/playerId para broadcast direcionado
 │
 ├── .env
 ├── tsconfig.json
 └── package.json
 ```
+
+> **Nota:** Módulos `impostor/` e `duo-chaos/` ainda não criados. Estrutura prevista mantida para implementação futura.
+
+### 4.3 Front-end (`/frontend`) — Implementado
+
+```
+frontend/
+├── public/
+│   └── assets/
+│       └── images/
+├── src/
+│   ├── main.tsx              # Entry point, providers
+│   ├── App.tsx               # React Router (/, /auth, /room/:roomId)
+│   ├── index.css             # Tailwind directives + tema global
+│   │
+│   ├── pages/                # ⚠️ Páginas em nível global (MVP)
+│   │   ├── AuthPage.tsx      # Login / Registro / Guest (unificado)
+│   │   ├── HomePage.tsx      # Criar sala / Entrar sala / Logout
+│   │   └── RoomPage.tsx      # Lobby + settings + start game
+│   │
+│   ├── socket/               # Socket.io-client + tipagem
+│   │   ├── socket.ts         # Instância raw (fallback)
+│   │   └── socketManager.ts  # getSocket / connectSocket / disconnectSocket
+│   │
+│   ├── store/                # Zustand stores (MVP — simplificado)
+│   │   ├── useAuthStore.ts   # Token + player + métodos auth
+│   │   └── useRoomStore.ts   # Estado da sala atual + mutations
+│   │
+│   ├── features/             # Ainda não populado (fase de jogos)
+│   │   ├── auth/
+│   │   ├── room/
+│   │   ├── impostor/
+│   │   └── duo-chaos/
+│   │
+│   ├── hooks/                 # Ainda não criado
+│   ├── components/           # Ainda não criado (UI genérica inline nas pages)
+│   └── utils/               # Ainda não criado
+│
+├── .env
+├── vite.config.ts
+├── tailwind.config.js
+├── tsconfig.json
+└── package.json
+```
+
+> **Nota:** Para a fase de jogos, as páginas globais devem migrar para `features/*/pages/` conforme estrutura original (seção 4.1).
 
 ### 4.3 Shared (`/shared`) — (Opcional, mas recomendado para type-safety total)
 
@@ -572,19 +598,31 @@ colors: {
 | 2026-04-29 | Zustand no lugar de Redux | Menos boilerplate, ideal para estado de jogo sincronizado via Socket. |
 | 2026-04-29 | Guest mode habilitado | Facilita jogar com amigos sem barreira de cadastro. |
 | 2026-04-29 | Reconexão de 60s | Balanceia UX (voltar após queda) com limpeza de estado (não manter salas fantasmas). |
+| 2026-05-10 | Auth com Map em memória (MVP) | MongoDB conectado, mas auth ainda usa `Map` local para agilizar desenvolvimento. Migração para Mongoose planejada antes do deploy. |
+| 2026-05-10 | Auth migrado para MongoDB/Mongoose | `User` schema criado, `auth.service.ts` reescrito para usar Mongoose. Dados de usuários agora persistem entre restarts. |
+| 2026-05-10 | Socket.io registry (`socketRegistry.ts`) | Mapa em memória no back-end para localizar sockets por `playerId` (usado em kick, reconexão). Alternativa a rooms do Socket.io para casos pontuais. |
 
 ### 10.2 Roadmap
 
 - [x] Definição da arquitetura e stack
 - [x] Estrutura de pastas
 - [x] Contratos TypeScript e eventos Socket
-- [ ] Configuração do monorepo (ou setup inicial front + back)
-- [ ] Setup do Tailwind + tema dark
-- [ ] Implementação do módulo `auth` (registro/login/guest)
-- [ ] Implementação do módulo `room` (criar, entrar, sair, transferir host)
-- [ ] Implementação do `Jogo do Impostor` (frontend + backend)
-- [ ] Implementação do `Encontre sua Dupla` (frontend + backend)
-- [ ] Telas de lobby, votação e resultado
+- [x] Configuração do monorepo (Turborepo + pnpm workspaces)
+- [x] Setup do Tailwind + tema dark
+- [x] Implementação do módulo `auth` (registro/login/guest via REST + JWT)
+- [x] Implementação do módulo `room` (criar, entrar, sair, kick, settings, transferir host, reconexão, destruição automática)
+- [x] Telas de lobby (AuthPage, HomePage, RoomPage)
+- [x] Implementação do `Jogo do Impostor` (frontend + backend)
+  - [x] Backend: handler, service, logic, types, schema em `modules/impostor/`
+  - [x] Frontend: ImpostorGamePage com fases playing, voting, reveal, finished
+  - [x] Hook `useImpostorGame` com timers e sincronização socket
+  - [x] Eventos adicionais: `impostor:request-state`, `impostor:state`
+- [x] Implementação do `Encontre sua Dupla` (frontend + backend)
+  - [x] Backend: handler, service, logic, types, schema em `modules/duo-chaos/`
+  - [x] Frontend: DuoChaosGamePage com turnos, envio de palavras, marcação de dupla
+  - [x] Hook `useDuoChaosGame` com timers e sincronização socket
+  - [x] Eventos adicionais: `duo-chaos:request-state`, `duo-chaos:state`
+- [x] Telas de votação e resultado dos jogos (ambos concluídos)
 - [ ] Testes de integração dos fluxos Socket
 - [ ] Deploy inicial (ambiente de amigos)
 
@@ -604,4 +642,30 @@ colors: {
 
 ---
 
-*Última atualização: 2026-04-29*
+---
+
+## 12. Estado Atual & Bloqueios Conhecidos (2026-05-10)
+
+| Item | Status | Detalhe |
+|------|--------|---------|
+| Monorepo + build | ✅ Funcionando | `pnpm dev` sobe front (5173) e back (3001) |
+| Auth REST | ✅ Funcionando | Login, registro, guest com JWT no `localStorage` |
+| Auth persistência | ✅ MongoDB | Schema `User` em Mongoose. Registro, login e guest persistem entre restarts |
+| MongoDB | ✅ Funcionando | `connectMongo()` rodando + schema `User` em produção |
+| Redis | ✅ Funcionando | Estado de salas, timers de reconexão e limpeza |
+| Salas (CRUD) | ✅ Funcionando | Criar, entrar, sair, kick, settings, transferência de host |
+| Reconexão | ✅ Funcionando | 60s de janela, reentrada automática no socketEvents |
+| Lobby (frontend) | ✅ Funcionando | AuthPage → HomePage → RoomPage com navegação e estado Socket |
+| Socket.io registry | ✅ Funcionando | `socketRegistry.ts` mapeia `playerId` → `Socket` |
+| Jogo do Impostor | ✅ Funcionando | Backend + frontend completo. Estado em Redis, timers automáticos, fases: dicas → votação → revelação → próxima rodada/game over |
+| Encontre sua Dupla | ✅ Funcionando | Backend + frontend completo. Estado em Redis, sorteio de dupla/impostor/solo, turnos, marcação mútua |
+| Rotas de jogo | ✅ Completo | `/game/impostor` e `/game/duo-chaos` adicionadas ao `App.tsx` |
+| Testes de integração | ✅ Manual (MVP) | Scripts de teste automatizado validaram fluxos completos do Impostor (3 jogadores) e Duo Chaos (3 jogadores). Timers, votação, revelação, marcação mútua e game-over funcionando |
+
+### Próximo passo recomendado
+1. Adicionar testes de integração automatizados (jest + socket.io-client) para regressão futura.
+2. Preparar deploy inicial (ambiente de amigos) — Render, Railway ou VPS.
+
+---
+
+*Última atualização: 2026-05-10*

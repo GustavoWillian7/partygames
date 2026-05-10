@@ -16,9 +16,11 @@ export interface ClientEvents {
 
   'impostor:send-clue': (payload: { word: string }) => void;
   'impostor:vote': (payload: { votedPlayerId: string | null }) => void;
+  'impostor:request-state': () => void;
 
   'duo-chaos:send-word': (payload: { word: string }) => void;
   'duo-chaos:mark-pair': (payload: { targetPlayerId: string }) => void;
+  'duo-chaos:request-state': () => void;
 }
 
 export interface ServerEvents {
@@ -46,11 +48,39 @@ export interface ServerEvents {
     wasImpostor: boolean;
     impostorIds: string[];
   }) => void;
+  'impostor:state': (payload: {
+    gameType: 'impostor';
+    phase: 'setup' | 'playing' | 'voting' | 'reveal' | 'finished';
+    currentRound: number;
+    timeRemaining: number;
+    players: { id: string; name: string; isEliminated: boolean }[];
+    clues: Record<string, string>;
+    votes: Record<string, string | null>;
+    eliminatedThisRound?: string;
+    yourWord?: string;
+    yourTheme?: string;
+  }) => void;
   'impostor:game-over': (payload: { winnerIds: string[]; reason: string }) => void;
 
-  'duo-chaos:turn-start': (payload: { turnPlayerId: string; timeRemaining: number }) => void;
+  'duo-chaos:turn-start': (payload: {
+    turnPlayerId: string;
+    timeRemaining: number;
+    yourRole?: 'impostor' | 'pair' | 'solo';
+    yourPartnerId?: string;
+  }) => void;
   'duo-chaos:word-received': (payload: { playerId: string; word: string }) => void;
   'duo-chaos:pair-marked': (payload: { playerId: string; targetId: string }) => void;
+  'duo-chaos:state': (payload: {
+    gameType: 'duo-chaos';
+    phase: 'playing' | 'finished';
+    turnPlayerId: string;
+    timeRemaining: number;
+    players: { id: string; name: string; isEliminated: boolean }[];
+    wordsGiven: Record<string, string>;
+    chatHistory: { playerId: string; word: string; timestamp: Date }[];
+    yourRole?: 'impostor' | 'pair' | 'solo';
+    yourPartnerId?: string;
+  }) => void;
   'duo-chaos:game-over': (payload: { winnerIds: string[]; reason: string }) => void;
 
   error: (payload: { code: string; message: string }) => void;

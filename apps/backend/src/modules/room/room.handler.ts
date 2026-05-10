@@ -1,33 +1,206 @@
 import { Server as SocketServer, Socket } from 'socket.io';
+import { roomService } from './room.service';
+import { authService } from '../auth/auth.service';
+import {
+  createRoomSchema,
+  joinRoomSchema,
+  kickPlayerSchema,
+  updateSettingsSchema,
+  startGameSchema,
+} from './room.schema';
+import { getSocket } from '../../socketRegistry';
+import { impostorService } from '../impostor/impostor.service';
+import { duoChaosService } from '../duo-chaos/duo-chaos.service';
+import type { Player } from '@partygames/shared';
+
+async function buildPlayer(socketId: string, playerId: string): Promise<Player> {
+  const profile = await authService.getById(playerId);
+  return {
+    id: playerId,
+    socketId,
+    name: profile?.name || 'Jogador',
+    status: 'online',
+    isHost: false,
+    score: 0,
+    createdAt: new Date(),
+  };
+}
+
+import { z } from 'zod';
+
+function validatePayload<T>(schema: z.ZodSchema<T>, payload: unknown): T {
+  const result = schema.safeParse(payload);
+  if (!result.success) {
+    throw new Error(`Invalid payload: ${result.error.issues.map((i) => i.message).join(', ')}`);
+  }
+  return result.data;
+}
+
+function buildImpostorCallbacks(io: SocketServer, roomId: string) {
+  return {
+    emitToRoom: (event: string, payload: unknown) => {
+      io.to(roomId).emit(event, payload);
+    },
+    emitToPlayer: (playerId: string, event: string, payload: unknown) => {
+      const targetSocket = getSocket(playerId);
+      if (targetSocket) {
+        targetSocket.emit(event, payload);
+      }
+    },
+    getRoomPlayers: async (_roomId: string) => {
+      const room = await roomService.getRoom(_roomId);
+      return room?.players ?? [];
+    },
+  };
+}
+
+function buildDuoChaosCallbacks(io: SocketServer, roomId: string) {
+  return {
+    emitToRoom: (event: string, payload: unknown) => {
+      io.to(roomId).emit(event, payload);
+    },
+    emitToPlayer: (playerId: string, event: string, payload: unknown) => {
+      const targetSocket = getSocket(playerId);
+      if (targetSocket) {
+        targetSocket.emit(event, payload);
+      }
+    },
+    getRoomPlayers: async (_roomId: string) => {
+      const room = await roomService.getRoom(_roomId);
+      return room?.players ?? [];
+    },
+  };
+}
 
 export function roomHandler(io: SocketServer, socket: Socket) {
-  socket.on('room:create', (payload) => {
-    // TODO: implement room creation logic
-    socket.emit('room:error', { message: 'Not implemented yet' });
+  const playerId = socket.data.playerId as string | undefined;
+  if (!playerId) {
+    socket.emit('room:error', { message: 'Authentication required' });
+    return;
+  }
+
+  socket.on('room:create', async (payload) => {
+    try {
+      const data = validatePayload(createRoomSchema, payload);
+      const player = await buildPlayer(socket.id, playerId);
+      const room = await roomService.createRoom(data.name, data.settings ?? {}, player);
+      socket.join(room.id);
+      socket.emit('room:state', room);
+    } catch (err) {
+      socket.emit('room:error', { message: err instanceof Error ? err.message : 'Failed to create room' });
+    }
   });
 
-  socket.on('room:join', (payload) => {
-    // TODO: implement room join logic
-    socket.emit('room:error', { message: 'Not implemented yet' });
+  socket.on('room:join', async (payload) => {
+    try {
+      const data = validatePayload(joinRoomSchema, payload);
+      const player = await buildPlayer(socket.id, playerId);
+      const room = await roomService.joinRoom(data.roomId, player);
+      socket.join(room.id);
+      socket.emit('room:state', room);
+      socket.to(room.id).emit('room:player-joined', { player });
+    } catch (err) {
+      socket.emit('room:error', { message: err instanceof Error ? err.message : 'Failed to join room' });
+    }
   });
 
-  socket.on('room:leave', () => {
-    // TODO: implement room leave logic
+  socket.on('room:leave', async () => {
+    try {
+      const { room, newHostId } = await roomService.leaveRoom(playerId);
+      if (!room) return;
+      socket.leave(room.id);
+      io.to(room.id).emit('room:player-left', { playerId, newHostId });
+    } catch (err) {
+      socket.emit('room:error', { message: err instanceof Error ? err.message : 'Failed to leave room' });
+    }
   });
 
-  socket.on('room:kick', (payload) => {
-    // TODO: implement kick logic
+  socket.on('room:kick', async (payload) => {
+    try {
+      const data = validatePayload(kickPlayerSchema, payload);
+      const roomId = await roomService.getPlayerRoomId(playerId);
+      if (!roomId) {
+        socket.emit('room:error', { message: 'You are not in a room' });
+        return;
+      }
+      const room = await roomService.kickPlayer(roomId, data.playerId, playerId);
+      io.to(room.id).emit('room:player-left', { playerId: data.playerId });
+
+      const kickedSocket = getSocket(data.playerId);
+      if (kickedSocket) {
+        kickedSocket.leave(room.id);
+        kickedSocket.emit('room:error', { message: 'You were kicked from the room' });
+      }
+    } catch (err) {
+      socket.emit('room:error', { message: err instanceof Error ? err.message : 'Failed to kick player' });
+    }
   });
 
-  socket.on('room:update-settings', (payload) => {
-    // TODO: implement settings update
+  socket.on('room:update-settings', async (payload) => {
+    try {
+      const data = validatePayload(updateSettingsSchema, payload);
+      const roomId = await roomService.getPlayerRoomId(playerId);
+      if (!roomId) {
+        socket.emit('room:error', { message: 'You are not in a room' });
+        return;
+      }
+      const room = await roomService.updateSettings(roomId, data, playerId);
+      io.to(room.id).emit('room:state', room);
+    } catch (err) {
+      socket.emit('room:error', { message: err instanceof Error ? err.message : 'Failed to update settings' });
+    }
   });
 
-  socket.on('room:start-game', (payload) => {
-    // TODO: implement game start
+  socket.on('room:start-game', async (payload) => {
+    try {
+      const data = validatePayload(startGameSchema, payload);
+      const roomId = await roomService.getPlayerRoomId(playerId);
+      if (!roomId) {
+        socket.emit('room:error', { message: 'You are not in a room' });
+        return;
+      }
+      const room = await roomService.startGame(roomId, data.gameType, playerId);
+
+      // Inicializar jogo específico
+      if (data.gameType === 'impostor') {
+        const callbacks = buildImpostorCallbacks(io, roomId);
+        await impostorService.startGame(roomId, room.players, callbacks);
+      } else if (data.gameType === 'duo-chaos') {
+        const callbacks = buildDuoChaosCallbacks(io, roomId);
+        await duoChaosService.startGame(roomId, room.players, callbacks);
+      }
+
+      io.to(room.id).emit('room:state', room);
+      io.to(room.id).emit('room:game-started', {
+        gameType: data.gameType,
+        initialState: buildInitialState(room, data.gameType),
+      });
+    } catch (err) {
+      socket.emit('room:error', { message: err instanceof Error ? err.message : 'Failed to start game' });
+    }
   });
 
-  socket.on('disconnect', () => {
-    // TODO: handle disconnection, reconnection window, host transfer
+  socket.on('disconnect', async () => {
+    try {
+      const { room, player } = await roomService.handleDisconnect(playerId, socket.id);
+      if (room && player) {
+        io.to(room.id).emit('room:player-left', { playerId });
+      }
+    } catch (err) {
+      console.error('[room:disconnect error]', err);
+    }
   });
+}
+
+function buildInitialState(room: import('@partygames/shared').Room, gameType: 'impostor' | 'duo-chaos'): import('@partygames/shared').GameState {
+  const activePlayers = room.players.filter((p) => p.status !== 'spectator');
+  return {
+    gameType,
+    phase: 'setup',
+    currentRound: 1,
+    timeRemaining: room.settings.roundTimeSeconds,
+    players: activePlayers,
+    eliminatedPlayerIds: [],
+    metadata: {},
+  };
 }
