@@ -1,0 +1,16 @@
+**Prompt de Geração de Imagem para a Nova Interface:**
+
+**Cena:** Iinterface do site de jogos moderna
+
+* **Fundo:** Um fundo gradiente escuro e profundo (azul-petróleo para roxo-preto) com um padrão geométrico abstrato e sutil que parece um mapa de dados futurista e nebulosa.
+* **Logotipo e Título:** O título "PartyGames" no topo, em uma fonte sans-serif elegante e moderna, com um gradiente de neon roxo para ciano. Abaixo dele, "Jogo do Impostor".
+* **Layout:** Cartões de interface de usuário (UI cards) flutuando levemente com o efeito de "glassmorphism" (vidro fosco translúcido com bordas sutilmente brilhantes).
+* **Seções Central:**
+    * **Painel de Palpite:** Um painel de glassmorphism com o campo de entrada para o palpite, o texto de espaço reservado "Ex: pelado" está ativo, e um botão "Enviar" com um brilho de neon vibrante e um efeito de pulsação suave. O texto de erro original é sutilmente estilizado como uma notificação de sistema mais polida.
+    * **Painel de Jogadores:** Uma lista de jogadores estilizada. Os nomes dos jogadores (como "teste1", "teste2", "teste3") são mostrados como pequenas esferas de luz ou ícones de avatar animados e sutilmente brilhantes que se movem levemente. Um ícone de "status" sutil (online/offline) ao lado de cada nome.
+* **Animações:** Efeitos visuais de micropartículas ou brilho ao passar o mouse sobre os botões e campos de entrada. Um carregamento em espiral sutil e elegante.
+* **Notificações (Toasts):** No canto superior direito da seção do site, uma notificação de toast de vidro fosco está visível, com um ícone de sucesso neon (ex: um checkmark) e o texto "Sucesso: Palpite registrado com sucesso! (1 jogador restante)" e "Acompanhe o chat para mais informações".
+* **Detalhes:** Uma barra de URL do navegador sutil e translúcida no topo.
+
+
+**Estética Geral:** Polida, premium, com gradientes profundos, glassmorphism e iluminação neon sutil. Uma fonte sans-serif geométrica e limpa em todo o site. O mouse cursor é visível e tem um rastro sutil de luz.

@@ -50,6 +50,7 @@ export interface ImpostorCallbacks {
   emitToRoom: (event: string, payload: unknown) => void;
   emitToPlayer: (playerId: string, event: string, payload: unknown) => void;
   getRoomPlayers: (roomId: string) => Promise<Player[]>;
+  onGameFinished?: (roomId: string) => Promise<void>;
 }
 
 export const impostorService = {
@@ -84,8 +85,9 @@ export const impostorService = {
     await saveGame(game);
 
     // Enviar palavra/tema individual para cada jogador
+    // Civis recebem a palavra secreta, impostor recebe só o tema + aviso
     for (const p of activePlayers) {
-      const { word: playerWord, theme: playerTheme } = getPlayerWord(
+      const { word: playerWord, theme: playerTheme, isImpostor } = getPlayerWord(
         p.id,
         impostorIds,
         word,
@@ -96,6 +98,7 @@ export const impostorService = {
         timeRemaining: Math.ceil(ROUND_TIME_MS / 1000),
         yourWord: playerWord,
         yourTheme: playerTheme,
+        isImpostor,
       });
     }
 
@@ -235,7 +238,7 @@ export const impostorService = {
     );
 
     for (const p of activePlayers) {
-      const { word: playerWord, theme: playerTheme } = getPlayerWord(
+      const { word: playerWord, theme: playerTheme, isImpostor } = getPlayerWord(
         p.id,
         game.impostorIds,
         game.secretWord,
@@ -246,6 +249,7 @@ export const impostorService = {
         timeRemaining: Math.ceil(ROUND_TIME_MS / 1000),
         yourWord: playerWord,
         yourTheme: playerTheme,
+        isImpostor,
       });
     }
 
@@ -271,6 +275,11 @@ export const impostorService = {
     scheduleTimer(roomId, 300_000, () => {
       deleteGame(roomId);
     });
+
+    // Notificar que o jogo terminou para atualizar a sala
+    if (callbacks.onGameFinished) {
+      await callbacks.onGameFinished(roomId);
+    }
   },
 
   async getGameState(roomId: string): Promise<ImpostorGame | null> {
@@ -286,7 +295,7 @@ export const impostorService = {
     if (!game) return;
 
     const players = await callbacks.getRoomPlayers(roomId);
-    const { word: playerWord, theme: playerTheme } = getPlayerWord(
+    const { word: playerWord, theme: playerTheme, isImpostor } = getPlayerWord(
       playerId,
       game.impostorIds,
       game.secretWord,
@@ -298,6 +307,7 @@ export const impostorService = {
       ...payload,
       yourWord: playerWord,
       yourTheme: playerTheme,
+      isImpostor,
     });
   },
 };

@@ -297,4 +297,8 @@ export const roomService = {
   async getPlayerRoomId(playerId: string): Promise<string | null> {
     return redis.get(`playerRoom:${playerId}`);
   },
+
+  async updateRoom(room: Room): Promise<void> {
+    await saveRoom(room);
+  },
 };

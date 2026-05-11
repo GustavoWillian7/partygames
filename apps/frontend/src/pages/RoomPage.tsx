@@ -4,6 +4,13 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/useAuthStore';
 import { useRoomStore } from '../store/useRoomStore';
 import { getSocket } from '../socket/socketManager';
+import GlassCard from '../components/ui/GlassCard';
+import NeonButton from '../components/ui/NeonButton';
+import GlowInput from '../components/ui/GlowInput';
+import AvatarOrb from '../components/ui/AvatarOrb';
+import Badge from '../components/ui/Badge';
+import GameCard from '../components/ui/GameCard';
+import SectionTitle from '../components/ui/SectionTitle';
 import type { RoomSettings } from '@partygames/shared';
 
 export default function RoomPage() {
@@ -37,7 +44,6 @@ export default function RoomPage() {
       navigate(`/game/${gameType}`);
     });
 
-    // If room not loaded, try to join by URL
     if (!currentRoom && roomId) {
       socket.emit('room:join', { roomId });
     }
@@ -75,98 +81,106 @@ export default function RoomPage() {
     socket.emit('room:start-game', { gameType });
   };
 
-  const statusColor = (status: string) => {
-    switch (status) {
-      case 'online': return 'bg-success';
-      case 'disconnected': return 'bg-danger';
-      case 'spectator': return 'bg-info';
-      default: return 'bg-muted';
-    }
-  };
-
   if (!currentRoom) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center">
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           className="text-center"
         >
-          <div className="w-12 h-12 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-          <p className="text-muted">Entrando na sala...</p>
-          {error && <p className="text-danger mt-2">{error}</p>}
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-6" />
+          <p className="text-muted text-lg">Entrando na sala...</p>
+          {error && <p className="text-danger mt-4">{error}</p>}
         </motion.div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
+    <div className="min-h-screen px-4 py-8 md:py-12">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="max-w-2xl mx-auto"
       >
+        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-primary">{currentRoom.name}</h1>
-            <p className="text-muted text-sm">Código: <span className="font-mono text-accent font-bold">{currentRoom.id}</span></p>
+            <h1 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent neon-text">
+              {currentRoom.name}
+            </h1>
+            <div className="flex items-center gap-2 mt-1">
+              <span className="text-muted text-sm">Código:</span>
+              <Badge variant="accent" size="sm">{currentRoom.id}</Badge>
+              <Badge
+                variant={currentRoom.status === 'waiting' ? 'success' : 'primary'}
+                size="sm"
+                pulse={currentRoom.status === 'playing'}
+              >
+                {currentRoom.status === 'waiting' ? 'Aguardando' : 'Em jogo'}
+              </Badge>
+            </div>
           </div>
-          <button
-            onClick={handleLeave}
-            className="px-4 py-2 rounded-lg bg-danger/10 text-danger hover:bg-danger/20 transition-colors text-sm font-medium"
-          >
-            Sair da Sala
-          </button>
+          <NeonButton onClick={handleLeave} variant="danger" size="sm">
+            🚪 Sair
+          </NeonButton>
         </div>
 
-        <div className="bg-surface rounded-2xl p-6 mb-4">
-          <h2 className="text-lg font-semibold text-text mb-4">Jogadores ({currentRoom.players.length}/{currentRoom.settings.maxPlayers})</h2>
-          <div className="space-y-2">
+        {/* Players */}
+        <GlassCard className="mb-4">
+          <SectionTitle
+            title="Jogadores"
+            subtitle={`${currentRoom.players.length}/${currentRoom.settings.maxPlayers} jogadores`}
+            icon="👥"
+          />
+
+          <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
             <AnimatePresence>
               {currentRoom.players.map((p) => (
                 <motion.div
                   key={p.id}
-                  initial={{ opacity: 0, x: -10 }}
-                  animate={{ opacity: 1, x: 0 }}
-                  exit={{ opacity: 0, x: 10 }}
-                  className="flex items-center justify-between p-3 rounded-lg bg-background"
+                  initial={{ opacity: 0, scale: 0.8 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  exit={{ opacity: 0, scale: 0.8 }}
+                  className="relative flex flex-col items-center gap-2 p-3 rounded-xl bg-background/40 border border-glassBorder"
                 >
-                  <div className="flex items-center gap-3">
-                    <div className={`w-3 h-3 rounded-full ${statusColor(p.status)}`} />
-                    <span className="text-text font-medium">{p.name}</span>
-                    {p.isHost && (
-                      <span className="text-xs bg-primary/20 text-primary px-2 py-0.5 rounded-full">Host</span>
-                    )}
-                    {p.status === 'spectator' && (
-                      <span className="text-xs bg-info/20 text-info px-2 py-0.5 rounded-full">Espectador</span>
-                    )}
-                  </div>
+                  <AvatarOrb
+                    name={p.name}
+                    isHost={p.isHost}
+                    isYou={p.id === player?.id}
+                    status={p.status === 'disconnected' ? 'disconnected' : p.status === 'spectator' ? 'spectator' : 'online'}
+                    size="lg"
+                  />
                   {isHost && p.id !== player?.id && currentRoom.status === 'waiting' && (
                     <button
                       onClick={() => handleKick(p.id)}
-                      className="text-danger text-sm hover:underline"
+                      className="absolute top-1 right-1 text-[10px] text-danger/70 hover:text-danger transition-colors"
                     >
-                      Expulsar
+                      ✕
                     </button>
                   )}
                 </motion.div>
               ))}
             </AnimatePresence>
           </div>
-        </div>
+        </GlassCard>
 
+        {/* Host Controls */}
         {isHost && currentRoom.status === 'waiting' && (
           <>
-            <div className="bg-surface rounded-2xl p-6 mb-4">
+            {/* Settings */}
+            <GlassCard className="mb-4">
               <div className="flex items-center justify-between mb-4">
-                <h2 className="text-lg font-semibold text-text">Configurações</h2>
-                <button
+                <SectionTitle title="Configurações" icon="⚙️" />
+                <NeonButton
                   onClick={() => setShowSettings(!showSettings)}
-                  className="text-sm text-primary hover:underline"
+                  variant="ghost"
+                  size="sm"
+                  glow={false}
                 >
                   {showSettings ? 'Fechar' : 'Editar'}
-                </button>
+                </NeonButton>
               </div>
 
               <AnimatePresence>
@@ -177,80 +191,80 @@ export default function RoomPage() {
                     exit={{ height: 0, opacity: 0 }}
                     className="space-y-4 overflow-hidden"
                   >
-                    <div>
-                      <label className="block text-sm text-muted mb-1">Máximo de jogadores</label>
-                      <input
-                        type="number"
-                        min={3}
-                        max={12}
-                        value={settingsForm.maxPlayers ?? currentRoom.settings.maxPlayers}
-                        onChange={(e) => setSettingsForm({ ...settingsForm, maxPlayers: parseInt(e.target.value) })}
-                        className="w-full px-3 py-2 rounded-lg bg-background border border-surface focus:border-primary focus:outline-none text-text"
-                      />
-                    </div>
+                    <GlowInput
+                      label="Máximo de jogadores"
+                      type="number"
+                      min={3}
+                      max={12}
+                      value={settingsForm.maxPlayers ?? currentRoom.settings.maxPlayers}
+                      onChange={(e) => setSettingsForm({ ...settingsForm, maxPlayers: parseInt(e.target.value) })}
+                    />
 
-                    <div>
-                      <label className="block text-sm text-muted mb-1">Tempo por rodada (segundos)</label>
-                      <input
-                        type="number"
-                        min={10}
-                        max={300}
-                        value={settingsForm.roundTimeSeconds ?? currentRoom.settings.roundTimeSeconds}
-                        onChange={(e) => setSettingsForm({ ...settingsForm, roundTimeSeconds: parseInt(e.target.value) })}
-                        className="w-full px-3 py-2 rounded-lg bg-background border border-surface focus:border-primary focus:outline-none text-text"
-                      />
-                    </div>
+                    <GlowInput
+                      label="Tempo por rodada (segundos)"
+                      type="number"
+                      min={10}
+                      max={300}
+                      value={settingsForm.roundTimeSeconds ?? currentRoom.settings.roundTimeSeconds}
+                      onChange={(e) => setSettingsForm({ ...settingsForm, roundTimeSeconds: parseInt(e.target.value) })}
+                    />
 
-                    <div className="flex items-center gap-3">
+                    <label className="flex items-center gap-3 cursor-pointer">
                       <input
                         type="checkbox"
-                        id="allowReconnection"
                         checked={settingsForm.allowReconnection ?? currentRoom.settings.allowReconnection}
                         onChange={(e) => setSettingsForm({ ...settingsForm, allowReconnection: e.target.checked })}
-                        className="w-5 h-5 accent-primary"
+                        className="w-5 h-5 accent-primary rounded"
                       />
-                      <label htmlFor="allowReconnection" className="text-sm text-text">Permitir reconexão</label>
-                    </div>
+                      <span className="text-sm text-text">Permitir reconexão</span>
+                    </label>
 
-                    <button
-                      onClick={handleUpdateSettings}
-                      className="w-full py-2 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition-colors"
-                    >
-                      Salvar
-                    </button>
+                    <NeonButton onClick={handleUpdateSettings} variant="primary" fullWidth>
+                      Salvar Configurações
+                    </NeonButton>
                   </motion.div>
                 )}
               </AnimatePresence>
-            </div>
+            </GlassCard>
 
-            <div className="bg-surface rounded-2xl p-6">
-              <h2 className="text-lg font-semibold text-text mb-4">Iniciar Jogo</h2>
-              <div className="grid grid-cols-2 gap-3">
-                <button
+            {/* Game Selection */}
+            <GlassCard>
+              <SectionTitle
+                title="Iniciar Jogo"
+                subtitle="Escolha um modo de jogo"
+                icon="🎮"
+              />
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <GameCard
+                  title="Jogo do Impostor"
+                  description="Descubra quem está mentindo! Um jogador é o impostor e não sabe a palavra secreta."
+                  icon="🎭"
+                  minPlayers={3}
                   onClick={() => handleStartGame('impostor')}
                   disabled={currentRoom.players.length < 3}
-                  className="p-4 rounded-xl bg-background border border-surface hover:border-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <p className="font-semibold text-text">Jogo do Impostor</p>
-                  <p className="text-xs text-muted mt-1">Min. 3 jogadores</p>
-                </button>
-                <button
+                />
+                <GameCard
+                  title="Encontre sua Dupla"
+                  description="Encontre quem tem a mesma palavra que você no Modo Caos!"
+                  icon="🎯"
+                  minPlayers={3}
                   onClick={() => handleStartGame('duo-chaos')}
                   disabled={currentRoom.players.length < 3}
-                  className="p-4 rounded-xl bg-background border border-surface hover:border-primary transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  <p className="font-semibold text-text">Encontre sua Dupla</p>
-                  <p className="text-xs text-muted mt-1">Modo Caos - Min. 3</p>
-                </button>
+                />
               </div>
-            </div>
+            </GlassCard>
           </>
         )}
 
         {currentRoom.status === 'playing' && (
-          <div className="bg-surface rounded-2xl p-6 text-center">
-            <p className="text-muted">Jogo em andamento...</p>
-          </div>
+          <GlassCard variant="accent" className="text-center">
+            <div className="py-8">
+              <div className="w-16 h-16 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
+              <h3 className="text-xl font-bold text-accent mb-2">Jogo em andamento!</h3>
+              <p className="text-muted">Aguarde o próximo jogo...</p>
+            </div>
+          </GlassCard>
         )}
 
         {error && (

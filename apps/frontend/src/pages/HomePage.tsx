@@ -4,6 +4,10 @@ import { motion } from 'framer-motion';
 import { useAuthStore } from '../store/useAuthStore';
 import { useRoomStore } from '../store/useRoomStore';
 import { getSocket, connectSocket } from '../socket/socketManager';
+import GlassCard from '../components/ui/GlassCard';
+import NeonButton from '../components/ui/NeonButton';
+import GlowInput from '../components/ui/GlowInput';
+import ToastNotification from '../components/ui/ToastNotification';
 
 export default function HomePage() {
   const { player, token, clearAuth } = useAuthStore();
@@ -66,74 +70,108 @@ export default function HomePage() {
   };
 
   return (
-    <div className="min-h-screen flex flex-col items-center justify-center bg-background px-4">
+    <div className="min-h-screen flex flex-col items-center justify-center px-4 py-12">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
-        className="w-full max-w-md"
+        transition={{ duration: 0.5 }}
+        className="w-full max-w-lg"
       >
-        <div className="flex items-center justify-between mb-8">
-          <div>
-            <h1 className="text-3xl font-bold text-primary">PartyGames</h1>
-            <p className="text-muted text-sm">Olá, {player?.name || 'Jogador'}!</p>
+        {/* Header */}
+        <motion.div
+          initial={{ opacity: 0, y: -20 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="text-center mb-8"
+        >
+          <div className="flex items-center justify-center gap-3 mb-2">
+            <span className="text-4xl">🎮</span>
+            <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-primary-light neon-text">
+              PartyGames
+            </h1>
           </div>
-          <button
-            onClick={handleLogout}
-            className="text-sm text-danger hover:underline"
-          >
-            Sair
-          </button>
-        </div>
+          <p className="text-muted">
+            Olá, <span className="text-text font-semibold">{player?.name || 'Jogador'}</span>! 👋
+          </p>
+        </motion.div>
 
-        <div className="bg-surface rounded-2xl p-6 shadow-xl border border-surface/50 mb-4">
-          <h2 className="text-lg font-semibold text-text mb-4">Criar Sala</h2>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={roomName}
-              onChange={(e) => setRoomName(e.target.value)}
-              placeholder="Nome da sala"
-              className="flex-1 px-4 py-2 rounded-lg bg-background border border-surface focus:border-primary focus:outline-none text-text"
-            />
-            <button
-              onClick={handleCreate}
-              disabled={isCreating}
-              className="px-4 py-2 rounded-lg bg-primary hover:bg-primary/90 text-white font-medium transition-colors disabled:opacity-50"
-            >
-              Criar
-            </button>
-          </div>
-        </div>
+        <div className="space-y-4">
+          {/* Create Room */}
+          <GlassCard variant="default" hover={true}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-primary/20 flex items-center justify-center">
+                <span className="text-xl">➕</span>
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-text">Criar Sala</h2>
+                <p className="text-sm text-muted">Inicie uma nova partida</p>
+              </div>
+            </div>
 
-        <div className="bg-surface rounded-2xl p-6 shadow-xl border border-surface/50">
-          <h2 className="text-lg font-semibold text-text mb-4">Entrar em Sala</h2>
-          <div className="flex gap-2">
-            <input
-              type="text"
-              value={roomCode}
-              onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
-              placeholder="Código (ex: ABCD)"
-              maxLength={4}
-              className="flex-1 px-4 py-2 rounded-lg bg-background border border-surface focus:border-primary focus:outline-none text-text"
-            />
-            <button
-              onClick={handleJoin}
-              className="px-4 py-2 rounded-lg bg-accent hover:bg-accent/90 text-background font-medium transition-colors"
-            >
-              Entrar
-            </button>
-          </div>
-        </div>
+            <div className="flex gap-3">
+              <GlowInput
+                placeholder="Nome da sala"
+                value={roomName}
+                onChange={(e) => setRoomName(e.target.value)}
+                onKeyDown={(e) => e.key === 'Enter' && handleCreate()}
+                className="flex-1"
+              />
+              <NeonButton
+                onClick={handleCreate}
+                disabled={isCreating || !roomName.trim()}
+                variant="primary"
+              >
+                Criar
+              </NeonButton>
+            </div>
+          </GlassCard>
 
-        {error && (
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            className="text-danger text-sm text-center mt-4"
-          >
+          {/* Join Room */}
+          <GlassCard variant="default" hover={true}>
+            <div className="flex items-center gap-3 mb-4">
+              <div className="w-10 h-10 rounded-xl bg-accent/20 flex items-center justify-center">
+                <span className="text-xl">🔗</span>
+              </div>
+              <div>
+                <h2 className="text-lg font-bold text-text">Entrar em Sala</h2>
+                <p className="text-sm text-muted">Use o código de 4 caracteres</p>
+              </div>
+            </div>
+
+            <div className="flex gap-3">
+              <GlowInput
+                placeholder="Código (ex: ABCD)"
+                value={roomCode}
+                onChange={(e) => setRoomCode(e.target.value.toUpperCase())}
+                onKeyDown={(e) => e.key === 'Enter' && handleJoin()}
+                maxLength={4}
+                className="flex-1"
+              />
+              <NeonButton
+                onClick={handleJoin}
+                disabled={!roomCode.trim()}
+                variant="accent"
+              >
+                Entrar
+              </NeonButton>
+            </div>
+          </GlassCard>
+
+          <ToastNotification show={!!error} variant="error">
             {error}
-          </motion.p>
-        )}
+          </ToastNotification>
+
+          {/* Logout */}
+          <div className="text-center pt-4">
+            <NeonButton
+              onClick={handleLogout}
+              variant="ghost"
+              size="sm"
+              glow={false}
+            >
+              🚪 Sair da conta
+            </NeonButton>
+          </div>
+        </div>
       </motion.div>
     </div>
   );

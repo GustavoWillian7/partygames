@@ -51,6 +51,16 @@ function buildImpostorCallbacks(io: SocketServer, roomId: string) {
       const room = await roomService.getRoom(_roomId);
       return room?.players ?? [];
     },
+    onGameFinished: async (_roomId: string) => {
+      const room = await roomService.getRoom(_roomId);
+      if (room) {
+        room.status = 'waiting';
+        room.currentGame = undefined;
+        room.updatedAt = new Date();
+        await roomService.updateRoom(room);
+        io.to(_roomId).emit('room:state', room);
+      }
+    },
   };
 }
 
@@ -68,6 +78,16 @@ function buildDuoChaosCallbacks(io: SocketServer, roomId: string) {
     getRoomPlayers: async (_roomId: string) => {
       const room = await roomService.getRoom(_roomId);
       return room?.players ?? [];
+    },
+    onGameFinished: async (_roomId: string) => {
+      const room = await roomService.getRoom(_roomId);
+      if (room) {
+        room.status = 'waiting';
+        room.currentGame = undefined;
+        room.updatedAt = new Date();
+        await roomService.updateRoom(room);
+        io.to(_roomId).emit('room:state', room);
+      }
     },
   };
 }

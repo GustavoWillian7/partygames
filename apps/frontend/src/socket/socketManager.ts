@@ -24,6 +24,17 @@ export function connectSocket(token: string | null): Socket<ServerEvents, Client
   if (!s.connected) {
     s.connect();
   }
+
+  // Listener único para shutdown do servidor
+  s.off('server:shutdown');
+  s.on('server:shutdown', (payload: { message: string }) => {
+    alert(payload.message || 'Servidor foi reiniciado. Você será desconectado.');
+    localStorage.removeItem('token');
+    localStorage.removeItem('player');
+    disconnectSocket();
+    window.location.href = '/';
+  });
+
   return s;
 }
 

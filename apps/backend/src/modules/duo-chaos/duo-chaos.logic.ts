@@ -1,5 +1,42 @@
 import type { Player } from '@partygames/shared';
 
+const WORD_BANK: { pairWord: string; outsiderWord: string; theme: string }[] = [
+  { pairWord: 'Cachorro', outsiderWord: 'Gato', theme: 'Animais domésticos' },
+  { pairWord: 'Messi', outsiderWord: 'CR7', theme: 'Jogadores de futebol' },
+  { pairWord: 'Pizza', outsiderWord: 'Lasanha', theme: 'Comidas italianas' },
+  { pairWord: 'Leão', outsiderWord: 'Tigre', theme: 'Felinos' },
+  { pairWord: 'Guitarra', outsiderWord: 'Violão', theme: 'Instrumentos de corda' },
+  { pairWord: 'Nike', outsiderWord: 'Adidas', theme: 'Marcas de roupa' },
+  { pairWord: 'Titanic', outsiderWord: 'Avatar', theme: 'Filmes famosos' },
+  { pairWord: 'Tênis', outsiderWord: 'Futebol', theme: 'Esportes' },
+  { pairWord: 'Brasil', outsiderWord: 'Argentina', theme: 'Países da América do Sul' },
+  { pairWord: 'Café', outsiderWord: 'Chá', theme: 'Bebidas quentes' },
+  { pairWord: 'Bicicleta', outsiderWord: 'Moto', theme: 'Meios de transporte' },
+  { pairWord: 'Harry Potter', outsiderWord: 'Senhor dos Anéis', theme: 'Livros famosos' },
+  { pairWord: 'Verão', outsiderWord: 'Inverno', theme: 'Estações do ano' },
+  { pairWord: 'Piano', outsiderWord: 'Órgão', theme: 'Instrumentos de teclas' },
+  { pairWord: 'Montanha', outsiderWord: 'Praia', theme: 'Lugares para viajar' },
+  { pairWord: 'Superman', outsiderWord: 'Batman', theme: 'Heróis da DC Comics' },
+];
+
+export function pickWords(): { pairWord: string; outsiderWord: string; theme: string } {
+  return WORD_BANK[Math.floor(Math.random() * WORD_BANK.length)];
+}
+
+export function getPlayerWord(
+  playerId: string,
+  pairs: Record<string, string>,
+  impostorIds: string[],
+  _soloPlayerId: string | undefined,
+  pairWord: string,
+  outsiderWord: string
+): string {
+  // A dupla recebe a palavra da dupla
+  if (pairs[playerId] !== undefined) return pairWord;
+  // Impostor e solo recebem a palavra "de fora" (a mesma para ambos)
+  return outsiderWord;
+}
+
 export function assignRoles(playerIds: string[]): {
   pairs: Record<string, string>;
   impostorIds: string[];
@@ -8,7 +45,6 @@ export function assignRoles(playerIds: string[]): {
   const shuffled = [...playerIds].sort(() => Math.random() - 0.5);
 
   if (playerIds.length === 3) {
-    // 3 jogadores: 1 dupla + 1 impostor
     const pairA = shuffled[0];
     const pairB = shuffled[1];
     const impostor = shuffled[2];
@@ -20,7 +56,6 @@ export function assignRoles(playerIds: string[]): {
   }
 
   if (playerIds.length === 4) {
-    // 4 jogadores: 1 dupla + 1 solo + 1 impostor
     const pairA = shuffled[0];
     const pairB = shuffled[1];
     const solo = shuffled[2];
@@ -32,7 +67,6 @@ export function assignRoles(playerIds: string[]): {
     };
   }
 
-  // 5+ jogadores: 1 dupla + resto solos/impostores (simplificado: 1 dupla + 1 impostor + resto solo)
   const pairA = shuffled[0];
   const pairB = shuffled[1];
   const impostor = shuffled[2];
@@ -93,8 +127,6 @@ export function checkGameOver(
     };
   }
 
-  // Caso em que marcam mutuamente mas não são a dupla real (ex: dois solos)
-  // Nesse caso, o jogo continua
   return { gameOver: false, winnerIds: [], reason: '' };
 }
 

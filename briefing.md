@@ -657,10 +657,18 @@ colors: {
 | Reconexão | ✅ Funcionando | 60s de janela, reentrada automática no socketEvents |
 | Lobby (frontend) | ✅ Funcionando | AuthPage → HomePage → RoomPage com navegação e estado Socket |
 | Socket.io registry | ✅ Funcionando | `socketRegistry.ts` mapeia `playerId` → `Socket` |
-| Jogo do Impostor | ✅ Funcionando | Backend + frontend completo. Estado em Redis, timers automáticos, fases: dicas → votação → revelação → próxima rodada/game over |
-| Encontre sua Dupla | ✅ Funcionando | Backend + frontend completo. Estado em Redis, sorteio de dupla/impostor/solo, turnos, marcação mútua |
+| Jogo do Impostor | ✅ Corrigido (v1.2) | Civis recebem a **palavra secreta**, impostor recebe só o **tema** + aviso "Você é o impostor!". O impostor deve dar dicas que se encaixem no tema sem saber a palavra. Frontend mostra UI diferente para impostor vs civil |
+| Encontre sua Dupla | ✅ Corrigido (v1.1) | Jogadores recebem **palavra secreta** em vez de ver sua função (impostor/dupla/solo). A dupla recebe a mesma palavra, forasteiros (impostor/solo) recebem outra palavra. A graça é descobrir quem tem a mesma palavra pelas dicas |
+| Lógica de palavras (ambos jogos) | ✅ Implementado | Banco de pares de palavras por tema (ex: civis="Messi" / impostor="CR7", tema="Jogadores de futebol"). 16 pares cadastrados |
 | Rotas de jogo | ✅ Completo | `/game/impostor` e `/game/duo-chaos` adicionadas ao `App.tsx` |
 | Testes de integração | ✅ Manual (MVP) | Scripts de teste automatizado validaram fluxos completos do Impostor (3 jogadores) e Duo Chaos (3 jogadores). Timers, votação, revelação, marcação mútua e game-over funcionando |
+| Tratamento de erros (backend) | ✅ Corrigido | Controllers async agora capturam erros e passam para `next(err)`. Error handler retorna 401/409/400/500 conforme o caso. Antes, erros de auth crashavam o servidor |
+| MongoDB Atlas (local) | ✅ Conectado | URI direta (sem `+srv`) usada para evitar bug de DNS SRV no Node.js Windows. Formato: `mongodb://user:pass@host1:27017,host2:27017,host3:27017/db?ssl=true&replicaSet=...` |
+| Redis (Upstash) | ✅ Conectado | TLS ativado (`rediss://`). Plano free do Upstash funcionando |
+| Shutdown gracioso | ✅ Implementado | Ao receber SIGINT/SIGTERM, o servidor: (1) emite `server:shutdown` para todos os sockets, (2) desconecta todos os jogadores, (3) limpa todas as chaves `room:*`, `game:*` e `socket:*` do Redis, (4) fecha HTTP server e Socket.io, (5) desconecta do Redis. Frontend mostra alert e redireciona para home |
+| Sala volta ao lobby após game over | ✅ Corrigido (v1.3) | Ambos os jogos agora chamam `onGameFinished` ao terminar, que atualiza a sala para `status: 'waiting'` e `currentGame: undefined`. Frontend emite `room:leave` ao clicar "Voltar ao Início", limpando o estado local |
+| Impostor recebe tema | ✅ Corrigido (v1.3) | Adicionado `isImpostor` ao tipo `ServerEvents` do Socket.io (`impostor:round-start` e `impostor:state`). Agora o frontend identifica corretamente quem é impostor e mostra o tema |
+| Marcar dupla só após 1 rodada | ✅ Corrigido (v1.3) | No Duo Chaos, `markPair` agora verifica se todos os jogadores falaram pelo menos 1 palavra (`chatHistory` tem entrada de cada `activePlayerId`). Se não, retorna erro "Aguarde todos os jogadores falarem pelo menos 1 vez" |
 
 ### Próximo passo recomendado
 1. Adicionar testes de integração automatizados (jest + socket.io-client) para regressão futura.
@@ -668,4 +676,4 @@ colors: {
 
 ---
 
-*Última atualização: 2026-05-10*
+*Última atualização: 2026-05-10 (v1.3 — correções de navegação pós-jogo, identificação de impostor e regra de marcação de dupla)*

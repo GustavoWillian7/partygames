@@ -7,6 +7,8 @@ import {
   checkMutualMark,
   checkGameOver,
   buildGamePayload,
+  pickWords,
+  getPlayerWord,
 } from './duo-chaos.logic';
 
 const TURN_TIME_MS = 30_000;
@@ -46,6 +48,7 @@ export interface DuoChaosCallbacks {
   emitToRoom: (event: string, payload: unknown) => void;
   emitToPlayer: (playerId: string, event: string, payload: unknown) => void;
   getRoomPlayers: (roomId: string) => Promise<Player[]>;
+  onGameFinished?: (roomId: string) => Promise<void>;
 }
 
 export const duoChaosService = {
@@ -54,6 +57,7 @@ export const duoChaosService = {
     const activeIds = activePlayers.map((p) => p.id);
 
     const { pairs, impostorIds, soloPlayerId } = assignRoles(activeIds);
+    const { pairWord, outsiderWord, theme } = pickWords();
     const firstTurn = activeIds[0];
 
     const game: DuoChaosGame = {
@@ -62,6 +66,9 @@ export const duoChaosService = {
       pairs,
       impostorIds,
       soloPlayerId,
+      pairWord,
+      outsiderWord,
+      theme,
       turnPlayerId: firstTurn,
       activePlayerIds: activeIds,
       eliminatedPlayerIds: [],
@@ -73,15 +80,21 @@ export const duoChaosService = {
 
     await saveGame(game);
 
+    // Enviar palavra individual para cada jogador (a dupla recebe a mesma palavra, forasteiros recebem outra)
     for (const p of activePlayers) {
-      const isPair = pairs[p.id] !== undefined;
-      const isImpostor = impostorIds.includes(p.id);
-      const isSolo = soloPlayerId === p.id;
+      const playerWord = getPlayerWord(
+        p.id,
+        pairs,
+        impostorIds,
+        soloPlayerId,
+        pairWord,
+        outsiderWord
+      );
       callbacks.emitToPlayer(p.id, 'duo-chaos:turn-start', {
         turnPlayerId: firstTurn,
         timeRemaining: Math.ceil(TURN_TIME_MS / 1000),
-        yourRole: isImpostor ? 'impostor' : isPair ? 'pair' : 'solo',
-        yourPartnerId: isPair ? pairs[p.id] : undefined,
+        yourWord: playerWord,
+        yourTheme: theme,
       });
     }
 
@@ -138,6 +151,14 @@ export const duoChaosService = {
     if (game.status !== 'playing') throw new Error('Game not in progress');
     if (playerId === targetId) throw new Error('Cannot mark yourself');
 
+    // Só permite marcar dupla após todos terem falado pelo menos 1 palavra
+    const allPlayersSpoken = game.activePlayerIds.every((id) =>
+      game.chatHistory.some((msg) => msg.playerId === id)
+    );
+    if (!allPlayersSpoken) {
+      throw new Error('Aguarde todos os jogadores falarem pelo menos 1 vez');
+    }
+
     game.markedPair[playerId] = targetId;
     await saveGame(game);
 
@@ -152,7 +173,6 @@ export const duoChaosService = {
           this.finishGame(roomId, result.winnerIds, result.reason, callbacks);
         });
       }
-      // Se não for game over (dois solos se marcando), continua normalmente
     }
   },
 
@@ -168,6 +188,11 @@ export const duoChaosService = {
     scheduleTimer(roomId, 300_000, () => {
       deleteGame(roomId);
     });
+
+    // Notificar que o jogo terminou para atualizar a sala
+    if (callbacks.onGameFinished) {
+      await callbacks.onGameFinished(roomId);
+    }
   },
 
   async sendCurrentState(roomId: string, playerId: string, callbacks: DuoChaosCallbacks): Promise<void> {
@@ -177,13 +202,19 @@ export const duoChaosService = {
     const players = await callbacks.getRoomPlayers(roomId);
     const payload = buildGamePayload(game, players);
 
-    const isPair = game.pairs[playerId] !== undefined;
-    const isImpostor = game.impostorIds.includes(playerId);
+    const playerWord = getPlayerWord(
+      playerId,
+      game.pairs,
+      game.impostorIds,
+      game.soloPlayerId,
+      game.pairWord,
+      game.outsiderWord
+    );
 
     callbacks.emitToPlayer(playerId, 'duo-chaos:state', {
       ...payload,
-      yourRole: isImpostor ? 'impostor' : isPair ? 'pair' : 'solo',
-      yourPartnerId: isPair ? game.pairs[playerId] : undefined,
+      yourWord: playerWord,
+      yourTheme: game.theme,
     });
   },
 

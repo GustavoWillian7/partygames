@@ -10,6 +10,7 @@ export interface ImpostorGameState {
   timeRemaining: number;
   yourWord?: string;
   yourTheme?: string;
+  isImpostor?: boolean;
   clues: Record<string, string>;
   votes: Record<string, string | null>;
   players: { id: string; name: string; isEliminated: boolean }[];
@@ -76,6 +77,7 @@ export function useImpostorGame() {
       eliminatedThisRound?: string;
       yourWord?: string;
       yourTheme?: string;
+      isImpostor?: boolean;
     }) => {
       setState((prev) => ({
         ...prev,
@@ -88,6 +90,7 @@ export function useImpostorGame() {
         eliminatedThisRound: payload.eliminatedThisRound,
         yourWord: payload.yourWord,
         yourTheme: payload.yourTheme,
+        isImpostor: payload.isImpostor,
       }));
       if (payload.phase === 'playing' || payload.phase === 'voting') {
         startTimer(payload.timeRemaining);
@@ -99,6 +102,7 @@ export function useImpostorGame() {
       timeRemaining: number;
       yourWord?: string;
       yourTheme?: string;
+      isImpostor?: boolean;
     }) => {
       setState((prev) => ({
         ...prev,
@@ -106,6 +110,7 @@ export function useImpostorGame() {
         currentRound: payload.round,
         yourWord: payload.yourWord,
         yourTheme: payload.yourTheme,
+        isImpostor: payload.isImpostor,
         clues: {},
         votes: {},
         eliminatedThisRound: undefined,
@@ -214,7 +219,6 @@ export function useImpostorGame() {
     }));
   }, [player?.id]);
 
-  const isImpostor = player?.id ? state.impostorIds?.includes(player.id) : false;
   const isWinner = player?.id ? state.winnerIds?.includes(player.id) : false;
 
   return {
@@ -222,7 +226,6 @@ export function useImpostorGame() {
     error,
     sendClue,
     submitVote,
-    isImpostor,
     isWinner,
     currentPlayerId: player?.id ?? null,
   };

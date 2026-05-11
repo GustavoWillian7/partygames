@@ -39,6 +39,7 @@ export interface ServerEvents {
     timeRemaining: number;
     yourWord?: string;
     yourTheme?: string;
+    isImpostor?: boolean;
   }) => void;
   'impostor:clue-received': (payload: { playerId: string; word: string }) => void;
   'impostor:voting-start': (payload: { players: Player[] }) => void;
@@ -59,14 +60,15 @@ export interface ServerEvents {
     eliminatedThisRound?: string;
     yourWord?: string;
     yourTheme?: string;
+    isImpostor?: boolean;
   }) => void;
   'impostor:game-over': (payload: { winnerIds: string[]; reason: string }) => void;
 
   'duo-chaos:turn-start': (payload: {
     turnPlayerId: string;
     timeRemaining: number;
-    yourRole?: 'impostor' | 'pair' | 'solo';
-    yourPartnerId?: string;
+    yourWord?: string;
+    yourTheme?: string;
   }) => void;
   'duo-chaos:word-received': (payload: { playerId: string; word: string }) => void;
   'duo-chaos:pair-marked': (payload: { playerId: string; targetId: string }) => void;
@@ -82,6 +84,8 @@ export interface ServerEvents {
     yourPartnerId?: string;
   }) => void;
   'duo-chaos:game-over': (payload: { winnerIds: string[]; reason: string }) => void;
+
+  'server:shutdown': (payload: { message: string }) => void;
 
   error: (payload: { code: string; message: string }) => void;
   notification: (payload: {

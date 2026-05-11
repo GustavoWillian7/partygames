@@ -3,7 +3,6 @@ import { getSocket } from '../socket/socketManager';
 import { useAuthStore } from '../store/useAuthStore';
 
 export type DuoChaosPhase = 'setup' | 'playing' | 'finished';
-export type DuoChaosRole = 'impostor' | 'pair' | 'solo';
 
 export interface DuoChaosGameState {
   phase: DuoChaosPhase;
@@ -12,8 +11,8 @@ export interface DuoChaosGameState {
   players: { id: string; name: string; isEliminated: boolean }[];
   wordsGiven: Record<string, string>;
   chatHistory: { playerId: string; word: string; timestamp: Date }[];
-  yourRole?: DuoChaosRole;
-  yourPartnerId?: string;
+  yourWord?: string;
+  yourTheme?: string;
   winnerIds?: string[];
   reason?: string;
 }
@@ -72,8 +71,8 @@ export function useDuoChaosGame() {
       players: { id: string; name: string; isEliminated: boolean }[];
       wordsGiven: Record<string, string>;
       chatHistory: { playerId: string; word: string; timestamp: Date }[];
-      yourRole?: DuoChaosRole;
-      yourPartnerId?: string;
+      yourWord?: string;
+      yourTheme?: string;
     }) => {
       setState((prev) => ({
         ...prev,
@@ -83,8 +82,8 @@ export function useDuoChaosGame() {
         players: payload.players,
         wordsGiven: payload.wordsGiven,
         chatHistory: payload.chatHistory,
-        yourRole: payload.yourRole,
-        yourPartnerId: payload.yourPartnerId,
+        yourWord: payload.yourWord,
+        yourTheme: payload.yourTheme,
       }));
       if (payload.phase === 'playing') {
         startTimer(payload.timeRemaining);
@@ -94,16 +93,16 @@ export function useDuoChaosGame() {
     const onTurnStart = (payload: {
       turnPlayerId: string;
       timeRemaining: number;
-      yourRole?: DuoChaosRole;
-      yourPartnerId?: string;
+      yourWord?: string;
+      yourTheme?: string;
     }) => {
       setState((prev) => ({
         ...prev,
         phase: 'playing',
         turnPlayerId: payload.turnPlayerId,
         wordsGiven: {},
-        yourRole: payload.yourRole ?? prev.yourRole,
-        yourPartnerId: payload.yourPartnerId ?? prev.yourPartnerId,
+        yourWord: payload.yourWord ?? prev.yourWord,
+        yourTheme: payload.yourTheme ?? prev.yourTheme,
       }));
       startTimer(payload.timeRemaining);
     };

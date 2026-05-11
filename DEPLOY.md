@@ -37,7 +37,6 @@
    ```
    mongodb+srv://<user>:<password>@<cluster>.mongodb.net/partygames?retryWrites=true&w=majority
    ```
-
 ---
 
 ## 4. Configurar Upstash Redis (Free)
@@ -49,7 +48,10 @@
    - **Endpoint** (ex: `valid-mastiff-12345.upstash.io`)
    - **Port** (geralmente `6379`)
    - **Password**
-5. Guarde essas informações.
+   5. Guarde essas informacoes. O backend espera no formato:
+      ```
+      REDIS_URL=rediss://default:<password>@<endpoint>:6379
+      ```
 
 ---
 

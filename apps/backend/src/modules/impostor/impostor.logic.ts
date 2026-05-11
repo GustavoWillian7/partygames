@@ -12,7 +12,7 @@ const WORD_BANK: { word: string; theme: string }[] = [
   { word: 'Café', theme: 'Bebidas quentes' },
   { word: 'Bicicleta', theme: 'Meios de transporte' },
   { word: 'Harry Potter', theme: 'Livros famosos' },
-  { word: 'Verao', theme: 'Estações do ano' },
+  { word: 'Verão', theme: 'Estações do ano' },
   { word: 'Piano', theme: 'Instrumentos de teclas' },
   { word: 'Montanha', theme: 'Formações geográficas' },
   { word: 'Superman', theme: 'Heróis da DC Comics' },
@@ -93,11 +93,11 @@ export function getPlayerWord(
   impostorIds: string[],
   secretWord: string,
   impostorTheme: string
-): { word?: string; theme?: string } {
+): { word?: string; theme?: string; isImpostor: boolean } {
   if (impostorIds.includes(playerId)) {
-    return { theme: impostorTheme };
+    return { theme: impostorTheme, isImpostor: true };
   }
-  return { word: secretWord };
+  return { word: secretWord, theme: impostorTheme, isImpostor: false };
 }
 
 export function allPlayersGaveClue(

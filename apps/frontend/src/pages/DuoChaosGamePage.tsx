@@ -2,12 +2,18 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDuoChaosGame } from '../hooks/useDuoChaosGame';
+import { useRoomStore } from '../store/useRoomStore';
+import { getSocket } from '../socket/socketManager';
+import GlassCard from '../components/ui/GlassCard';
+import NeonButton from '../components/ui/NeonButton';
+import GlowInput from '../components/ui/GlowInput';
+import Badge from '../components/ui/Badge';
 
 export default function DuoChaosGamePage() {
   const { state, error, sendWord, markPair, markedTarget, isMyTurn, isWinner, currentPlayerId } = useDuoChaosGame();
+  const { clearRoom } = useRoomStore();
   const navigate = useNavigate();
   const [wordInput, setWordInput] = useState('');
-  const [showRole, setShowRole] = useState(false);
 
   const currentTurnPlayer = state.players.find((p) => p.id === state.turnPlayerId);
 
@@ -17,22 +23,41 @@ export default function DuoChaosGamePage() {
     setWordInput('');
   };
 
+  const handleLeave = () => {
+    const socket = getSocket();
+    socket.emit('room:leave');
+    clearRoom();
+    navigate('/');
+  };
+
   return (
-    <div className="min-h-screen bg-background p-4 md:p-8">
+    <div className="min-h-screen px-4 py-8 md:py-12">
       <motion.div
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         className="max-w-xl mx-auto"
       >
+        {/* Header */}
         <div className="flex items-center justify-between mb-6">
           <div>
-            <h1 className="text-2xl font-bold text-primary">Encontre sua Dupla</h1>
-            <p className="text-muted text-sm">Modo Caos</p>
+            <div className="flex items-center gap-2">
+              <span className="text-2xl">🎯</span>
+              <h1 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent neon-text">
+                Encontre sua Dupla
+              </h1>
+            </div>
+            <Badge variant="accent" size="sm">Modo Caos</Badge>
           </div>
           {state.timeRemaining > 0 && (
-            <div className={`text-2xl font-bold tabular-nums ${state.timeRemaining <= 10 ? 'text-danger' : 'text-text'}`}>
+            <motion.div
+              animate={state.timeRemaining <= 10 ? { scale: [1, 1.1, 1] } : {}}
+              transition={{ repeat: Infinity, duration: 1 }}
+              className={`text-3xl font-black tabular-nums ${
+                state.timeRemaining <= 10 ? 'text-danger neon-text' : 'text-text'
+              }`}
+            >
               {state.timeRemaining}s
-            </div>
+            </motion.div>
           )}
         </div>
 
@@ -40,7 +65,7 @@ export default function DuoChaosGamePage() {
           <motion.p
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
-            className="text-danger text-sm text-center mb-4"
+            className="text-danger text-sm text-center mb-4 bg-danger/10 rounded-xl p-3 border border-danger/20"
           >
             {error}
           </motion.p>
@@ -56,105 +81,133 @@ export default function DuoChaosGamePage() {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-4"
             >
-              {/* Role Card */}
-              <div className="bg-surface rounded-2xl p-6 text-center border border-primary/20">
-                <p className="text-muted text-sm mb-2">Seu papel</p>
-                <button
-                  onClick={() => setShowRole(!showRole)}
-                  className="text-lg font-bold text-accent hover:underline"
+              {/* Secret Word */}
+              <GlassCard variant="accent" className="text-center">
+                <p className="text-muted text-sm mb-2">Sua palavra:</p>
+                <motion.p
+                  initial={{ scale: 0.5 }}
+                  animate={{ scale: 1 }}
+                  className="text-3xl font-black text-accent neon-text-cyan"
                 >
-                  {showRole ? (
-                    <span>
-                      {state.yourRole === 'impostor' && 'Impostor 🎭'}
-                      {state.yourRole === 'pair' && `Dupla (com ${state.players.find(p => p.id === state.yourPartnerId)?.name ?? '?'}) 💕`}
-                      {state.yourRole === 'solo' && 'Solo 🧍'}
-                      {!state.yourRole && '???'}
-                    </span>
-                  ) : (
-                    'Clique para revelar'
-                  )}
-                </button>
-              </div>
+                  {state.yourWord ?? '???'}
+                </motion.p>
+                <p className="text-muted text-xs mt-2">Tema: {state.yourTheme ?? '???'}</p>
+                <p className="text-primary text-xs mt-3 bg-primary/10 rounded-lg p-2">
+                  Dê uma dica relacionada, mas não fale a palavra!
+                </p>
+              </GlassCard>
 
               {/* Turn Indicator */}
-              <div className="bg-surface rounded-2xl p-4 text-center">
+              <GlassCard className={`text-center ${isMyTurn ? 'neon-border' : ''}`}>
                 <p className="text-muted text-sm">Vez de</p>
-                <p className="text-xl font-bold text-text">
-                  {isMyTurn ? 'Você!' : currentTurnPlayer?.name ?? '...'}
-                </p>
-              </div>
+                <motion.p
+                  key={state.turnPlayerId}
+                  initial={{ scale: 0.8 }}
+                  animate={{ scale: 1 }}
+                  className={`text-xl font-bold ${isMyTurn ? 'text-accent neon-text-cyan' : 'text-text'}`}
+                >
+                  {isMyTurn ? '🎉 Você!' : currentTurnPlayer?.name ?? '...'}
+                </motion.p>
+                {isMyTurn && (
+                  <motion.div
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="mt-2"
+                  >
+                    <Badge variant="accent" size="sm" pulse>Sua vez!</Badge>
+                  </motion.div>
+                )}
+              </GlassCard>
 
               {/* Word Input */}
               {isMyTurn && (
-                <div className="bg-surface rounded-2xl p-6">
-                  <label className="block text-sm font-medium text-text mb-2">Envie uma palavra</label>
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      value={wordInput}
-                      onChange={(e) => setWordInput(e.target.value)}
-                      onKeyDown={(e) => e.key === 'Enter' && handleSendWord()}
-                      maxLength={50}
-                      placeholder="Ex: amizade"
-                      className="flex-1 px-4 py-2 rounded-lg bg-background border border-surface focus:border-primary focus:outline-none text-text"
-                    />
-                    <button
-                      onClick={handleSendWord}
-                      disabled={!wordInput.trim()}
-                      className="px-4 py-2 rounded-lg bg-primary text-white font-medium hover:bg-primary/90 transition-colors disabled:opacity-50"
-                    >
-                      Enviar
-                    </button>
-                  </div>
-                </div>
+                <GlassCard>
+                  <GlowInput
+                    label="Envie uma palavra"
+                    value={wordInput}
+                    onChange={(e) => setWordInput(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && handleSendWord()}
+                    maxLength={50}
+                    placeholder="Ex: amizade"
+                  />
+                  <NeonButton
+                    onClick={handleSendWord}
+                    disabled={!wordInput.trim()}
+                    variant="primary"
+                    fullWidth
+                    className="mt-3"
+                  >
+                    Enviar
+                  </NeonButton>
+                </GlassCard>
               )}
 
               {/* Chat History */}
               {state.chatHistory.length > 0 && (
-                <div className="bg-surface rounded-2xl p-6">
-                  <h3 className="text-sm font-semibold text-muted mb-3">Palavras enviadas</h3>
-                  <div className="space-y-2 max-h-48 overflow-y-auto">
+                <GlassCard>
+                  <h3 className="text-sm font-bold text-muted mb-3 flex items-center gap-2">
+                    💬 Palavras enviadas
+                  </h3>
+                  <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
                     {state.chatHistory.map((msg, idx) => {
                       const sender = state.players.find((p) => p.id === msg.playerId);
                       return (
-                        <div key={idx} className="flex items-center gap-2 p-2 rounded-lg bg-background">
+                        <motion.div
+                          key={idx}
+                          initial={{ opacity: 0, x: -10 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          className="flex items-center gap-2 p-2 rounded-xl bg-background/60 border border-glassBorder"
+                        >
                           <span className="text-xs text-muted">{sender?.name ?? '???'}</span>
-                          <span className="text-accent font-medium">{msg.word}</span>
-                        </div>
+                          <span className="text-accent font-bold">{msg.word}</span>
+                        </motion.div>
                       );
                     })}
                   </div>
-                </div>
+                </GlassCard>
               )}
 
               {/* Mark Pair */}
-              <div className="bg-surface rounded-2xl p-6">
-                <h3 className="text-sm font-semibold text-muted mb-3">Quem é sua dupla?</h3>
+              <GlassCard>
+                <h3 className="text-sm font-bold text-muted mb-3">Quem é sua dupla?</h3>
                 <div className="grid grid-cols-2 gap-2">
                   {state.players
                     .filter((p) => p.id !== currentPlayerId && !p.isEliminated)
                     .map((p) => (
-                      <button
+                      <motion.button
                         key={p.id}
+                        whileHover={{ scale: 1.02 }}
+                        whileTap={{ scale: 0.98 }}
                         onClick={() => markPair(p.id)}
                         disabled={markedTarget === p.id}
-                        className={`p-3 rounded-xl text-sm font-medium transition-colors ${
-                          markedTarget === p.id
-                            ? 'bg-accent/20 text-accent border border-accent'
-                            : 'bg-background text-text border border-surface hover:border-primary'
-                        }`}
+                        className={`
+                          p-3 rounded-xl text-sm font-medium transition-all duration-300 border
+                          ${markedTarget === p.id
+                            ? 'bg-accent/20 text-accent border-accent glow-accent'
+                            : 'bg-background/60 text-text border-glassBorder hover:border-primary'
+                          }
+                          disabled:cursor-not-allowed
+                        `}
                       >
                         {p.name}
                         {markedTarget === p.id && ' ✓'}
-                      </button>
+                      </motion.button>
                     ))}
                 </div>
                 {markedTarget && (
-                  <p className="text-xs text-muted mt-2 text-center">
-                    Você marcou {state.players.find((p) => p.id === markedTarget)?.name} como dupla. Aguardando...
-                  </p>
+                  <motion.p
+                    initial={{ opacity: 0 }}
+                    animate={{ opacity: 1 }}
+                    className="text-xs text-muted mt-2 text-center"
+                  >
+                    Você marcou{' '}
+                    <span className="text-accent font-medium">
+                      {state.players.find((p) => p.id === markedTarget)?.name}
+                    </span>{' '}
+                    como dupla. Aguardando...
+                  </motion.p>
                 )}
-              </div>
+              </GlassCard>
             </motion.div>
           )}
 
@@ -164,70 +217,86 @@ export default function DuoChaosGamePage() {
               key="finished"
               initial={{ opacity: 0, scale: 0.8 }}
               animate={{ opacity: 1, scale: 1 }}
-              className="bg-surface rounded-2xl p-8 text-center border border-accent/20"
+              className="space-y-4"
             >
-              <h2 className="text-3xl font-bold text-accent mb-4">Fim de Jogo!</h2>
-              <p className="text-text text-lg mb-6">{state.reason}</p>
-
-              <div className="mb-6">
-                <h3 className="text-sm font-semibold text-muted mb-2">Vencedores</h3>
-                <div className="flex flex-wrap justify-center gap-2">
-                  {state.winnerIds?.map((id) => {
-                    const winner = state.players.find((p) => p.id === id);
-                    return (
-                      <span
-                        key={id}
-                        className="px-3 py-1 rounded-full bg-accent/20 text-accent font-medium"
-                      >
-                        {winner?.name ?? id}
-                      </span>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {isWinner && (
-                <motion.p
-                  initial={{ opacity: 0, y: 10 }}
-                  animate={{ opacity: 1, y: 0 }}
-                  className="text-xl text-success font-bold mb-4"
+              <GlassCard variant="accent" className="text-center">
+                <motion.div
+                  initial={{ scale: 0 }}
+                  animate={{ scale: 1 }}
+                  transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
+                  className="text-6xl mb-4"
                 >
-                  Você venceu! 🎉
-                </motion.p>
-              )}
+                  🏆
+                </motion.div>
+                <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-accent to-primary-light neon-text mb-4">
+                  Fim de Jogo!
+                </h2>
+                <p className="text-text text-lg mb-6">{state.reason}</p>
 
-              <button
-                onClick={() => navigate('/')}
-                className="px-6 py-3 rounded-lg bg-primary text-white font-semibold hover:bg-primary/90 transition-colors"
-              >
-                Voltar ao Início
-              </button>
+                <div className="mb-6">
+                  <h3 className="text-sm font-semibold text-muted mb-3">Vencedores</h3>
+                  <div className="flex flex-wrap justify-center gap-2">
+                    {state.winnerIds?.map((id) => {
+                      const winner = state.players.find((p) => p.id === id);
+                      return (
+                        <motion.span
+                          key={id}
+                          initial={{ opacity: 0, scale: 0 }}
+                          animate={{ opacity: 1, scale: 1 }}
+                          className="px-4 py-2 rounded-full bg-accent/20 text-accent font-bold border border-accent/30"
+                        >
+                          🎉 {winner?.name ?? id}
+                        </motion.span>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {isWinner && (
+                  <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    className="mb-6"
+                  >
+                    <div className="inline-block px-6 py-3 rounded-2xl bg-success/20 border border-success/30">
+                      <p className="text-xl text-success font-bold">🎊 Você venceu! 🎊</p>
+                    </div>
+                  </motion.div>
+                )}
+
+                <NeonButton onClick={handleLeave} variant="primary" size="lg" fullWidth>
+                  Voltar ao Início
+                </NeonButton>
+              </GlassCard>
             </motion.div>
           )}
         </AnimatePresence>
 
         {/* Players List */}
-        <div className="mt-8 bg-surface rounded-2xl p-6">
-          <h3 className="text-sm font-semibold text-muted mb-4">Jogadores</h3>
+        <GlassCard className="mt-6">
+          <h3 className="text-sm font-bold text-muted mb-4 flex items-center gap-2">
+            👥 Jogadores
+          </h3>
           <div className="grid grid-cols-2 gap-2">
             {state.players.map((p) => (
-              <div
+              <motion.div
                 key={p.id}
-                className={`flex items-center gap-2 p-2 rounded-lg ${
-                  p.isEliminated ? 'bg-danger/10 opacity-50' : 'bg-background'
-                }`}
+                whileHover={{ scale: 1.05 }}
+                className={`flex items-center gap-2 p-2 rounded-xl ${
+                  p.isEliminated ? 'bg-danger/10 opacity-50' : 'bg-background/60'
+                } border border-glassBorder`}
               >
                 <div className={`w-2 h-2 rounded-full ${p.isEliminated ? 'bg-danger' : 'bg-success'}`} />
                 <span className={`text-sm ${p.isEliminated ? 'text-muted line-through' : 'text-text'}`}>
                   {p.name}
                 </span>
                 {p.id === currentPlayerId && (
-                  <span className="text-[10px] text-primary">(você)</span>
+                  <span className="text-[10px] text-primary font-medium">(você)</span>
                 )}
-              </div>
+              </motion.div>
             ))}
           </div>
-        </div>
+        </GlassCard>
       </motion.div>
     </div>
   );
