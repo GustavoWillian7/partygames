@@ -4,12 +4,13 @@ import { createServer } from 'http';
 import { Server as SocketServer } from 'socket.io';
 import { env } from './config/env';
 import { connectMongo } from './config/mongo';
-import { redis } from './config/redis';
+import { redis, connectRedis } from './config/redis';
 import { errorHandler } from './middleware/errorHandler';
 import authRoutes from './modules/auth/auth.routes';
 import { registerSocketEvents } from './events/socketEvents';
 
 async function main() {
+  await connectRedis();
   await connectMongo();
 
   const app = express();
@@ -67,8 +68,12 @@ async function main() {
       console.log('[Server] Socket.io closed.');
     });
 
-    await redis.quit();
-    console.log('[Server] Redis disconnected.');
+    try {
+      await redis.quit();
+      console.log('[Server] Redis disconnected.');
+    } catch {
+      console.log('[Server] Redis already disconnected.');
+    }
 
     // Dar um tempinho para os sockets processarem o evento antes de matar o processo
     setTimeout(() => {
