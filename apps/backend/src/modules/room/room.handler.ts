@@ -30,10 +30,27 @@ async function buildPlayer(socketId: string, playerId: string): Promise<Player> 
 
 import { z } from 'zod';
 
+function translateZodMessage(msg: string): string {
+  if (msg.includes('String must contain at most')) {
+    const match = msg.match(/\d+/);
+    const limit = match ? match[0] : '??';
+    return `O campo deve ter no máximo ${limit} caracteres`;
+  }
+  if (msg.includes('String must contain at least')) {
+    const match = msg.match(/\d+/);
+    const limit = match ? match[0] : '??';
+    return `O campo deve ter no mínimo ${limit} caracteres`;
+  }
+  if (msg.includes('Required')) return 'Campo obrigatório';
+  if (msg.includes('Invalid')) return 'Valor inválido';
+  return msg;
+}
+
 function validatePayload<T>(schema: z.ZodSchema<T>, payload: unknown): T {
   const result = schema.safeParse(payload);
   if (!result.success) {
-    throw new Error(`Invalid payload: ${result.error.issues.map((i) => i.message).join(', ')}`);
+    const translated = result.error.issues.map((i) => translateZodMessage(i.message)).join(', ');
+    throw new Error(translated);
   }
   return result.data;
 }

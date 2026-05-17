@@ -9,6 +9,7 @@ import {
   buildGamePayload,
   pickWords,
   getPlayerWord,
+  buildPlayerWords,
 } from './duo-chaos.logic';
 
 const TURN_TIME_MS = 30_000;
@@ -56,8 +57,9 @@ export const duoChaosService = {
     const activePlayers = players.filter((p) => p.status !== 'spectator');
     const activeIds = activePlayers.map((p) => p.id);
 
-    const { pairs, impostorIds, soloPlayerId } = assignRoles(activeIds);
-    const { pairWord, outsiderWord, theme } = pickWords(themeGroup);
+    const { pairs, impostorIds, pairCount } = assignRoles(activeIds);
+    const wordSets = pickWords(pairCount, themeGroup);
+    const { playerWords, theme } = buildPlayerWords(pairs, impostorIds, wordSets);
     const firstTurn = activeIds[0];
 
     const game: DuoChaosGame = {
@@ -65,9 +67,7 @@ export const duoChaosService = {
       status: 'playing',
       pairs,
       impostorIds,
-      soloPlayerId,
-      pairWord,
-      outsiderWord,
+      playerWords,
       theme,
       turnPlayerId: firstTurn,
       activePlayerIds: activeIds,
@@ -80,16 +80,9 @@ export const duoChaosService = {
 
     await saveGame(game);
 
-    // Enviar palavra individual para cada jogador (a dupla recebe a mesma palavra, forasteiros recebem outra)
+    // Enviar palavra individual para cada jogador
     for (const p of activePlayers) {
-      const playerWord = getPlayerWord(
-        p.id,
-        pairs,
-        impostorIds,
-        soloPlayerId,
-        pairWord,
-        outsiderWord
-      );
+      const playerWord = getPlayerWord(p.id, pairs, impostorIds, playerWords);
       callbacks.emitToPlayer(p.id, 'duo-chaos:turn-start', {
         turnPlayerId: firstTurn,
         timeRemaining: Math.ceil(TURN_TIME_MS / 1000),
@@ -202,14 +195,7 @@ export const duoChaosService = {
     const players = await callbacks.getRoomPlayers(roomId);
     const payload = buildGamePayload(game, players);
 
-    const playerWord = getPlayerWord(
-      playerId,
-      game.pairs,
-      game.impostorIds,
-      game.soloPlayerId,
-      game.pairWord,
-      game.outsiderWord
-    );
+    const playerWord = getPlayerWord(playerId, game.pairs, game.impostorIds, game.playerWords);
 
     callbacks.emitToPlayer(playerId, 'duo-chaos:state', {
       ...payload,

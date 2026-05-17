@@ -125,11 +125,12 @@ export function useImpostorGame() {
       }));
     };
 
-    const onVotingStart = (_payload: { players: { id: string; name: string }[] }) => {
+    const onVotingStart = (payload: { players: { id: string; name: string }[] }) => {
       setState((prev) => ({
         ...prev,
         phase: 'voting',
         votes: {},
+        players: payload.players.map((p) => ({ ...p, isEliminated: prev.players.find((op) => op.id === p.id)?.isEliminated ?? false })),
       }));
       startTimer(30);
     };

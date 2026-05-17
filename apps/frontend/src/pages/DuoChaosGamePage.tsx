@@ -11,7 +11,7 @@ import Badge from '../components/ui/Badge';
 
 export default function DuoChaosGamePage() {
   const { state, error, sendWord, markPair, markedTarget, isMyTurn, isWinner, currentPlayerId } = useDuoChaosGame();
-  const { clearRoom } = useRoomStore();
+  const { currentRoom, clearRoom } = useRoomStore();
   const navigate = useNavigate();
   const [wordInput, setWordInput] = useState('');
 
@@ -264,8 +264,20 @@ export default function DuoChaosGamePage() {
                   </motion.div>
                 )}
 
-                <NeonButton onClick={handleLeave} variant="primary" size="lg" fullWidth>
-                  Voltar ao Início
+                <NeonButton
+                  onClick={() => {
+                    const roomId = currentRoom?.id;
+                    if (roomId) navigate(`/room/${roomId}`);
+                    else navigate('/');
+                  }}
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                >
+                  Voltar à Sala
+                </NeonButton>
+                <NeonButton onClick={handleLeave} variant="ghost" size="sm" fullWidth glow={false} className="mt-2">
+                  Sair da Sala
                 </NeonButton>
               </GlassCard>
             </motion.div>

@@ -41,5 +41,6 @@ export function connectSocket(token: string | null): Socket<ServerEvents, Client
 export function disconnectSocket(): void {
   if (socket) {
     socket.disconnect();
+    socket = null;
   }
 }

@@ -5,9 +5,7 @@ export interface DuoChaosGame {
   status: 'setup' | 'playing' | 'finished';
   pairs: Record<string, string>; // playerId -> partnerId (real pair)
   impostorIds: string[];
-  soloPlayerId?: string;
-  pairWord: string;
-  outsiderWord: string;
+  playerWords: Record<string, string>; // playerId -> word they received
   theme: string;
   turnPlayerId: string;
   activePlayerIds: string[];

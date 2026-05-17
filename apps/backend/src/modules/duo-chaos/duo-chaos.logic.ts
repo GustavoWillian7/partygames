@@ -1,65 +1,94 @@
 import type { Player } from '@partygames/shared';
 import { getThemeGroup } from '../../data/themeGroups';
 
-export function pickWords(themeGroupId?: string): { pairWord: string; outsiderWord: string; theme: string } {
+export interface WordSet {
+  pairWord: string;
+  outsiderWord: string;
+  theme: string;
+}
+
+export function pickWords(count: number, themeGroupId?: string): WordSet[] {
   const group = getThemeGroup(themeGroupId ?? 'all');
   const entries = group?.entries.length ? group.entries : getThemeGroup('all')!.entries;
-  const entry = entries[Math.floor(Math.random() * entries.length)];
-  return entry.duoChaos;
+  const shuffled = [...entries].sort(() => Math.random() - 0.5);
+  const selected = shuffled.slice(0, Math.min(count, shuffled.length));
+  return selected.map((e) => e.duoChaos);
 }
 
 export function getPlayerWord(
   playerId: string,
   pairs: Record<string, string>,
   impostorIds: string[],
-  _soloPlayerId: string | undefined,
-  pairWord: string,
-  outsiderWord: string
+  playerWords: Record<string, string>
 ): string {
-  // A dupla recebe a palavra da dupla
-  if (pairs[playerId] !== undefined) return pairWord;
-  // Impostor e solo recebem a palavra "de fora" (a mesma para ambos)
-  return outsiderWord;
+  return playerWords[playerId] ?? '???';
 }
 
 export function assignRoles(playerIds: string[]): {
   pairs: Record<string, string>;
   impostorIds: string[];
-  soloPlayerId?: string;
+  pairCount: number;
 } {
   const shuffled = [...playerIds].sort(() => Math.random() - 0.5);
+  const n = playerIds.length;
 
-  if (playerIds.length === 3) {
-    const pairA = shuffled[0];
-    const pairB = shuffled[1];
-    const impostor = shuffled[2];
-    return {
-      pairs: { [pairA]: pairB, [pairB]: pairA },
-      impostorIds: [impostor],
-      soloPlayerId: undefined,
-    };
+  let pairCount: number;
+  let impostorCount: number;
+
+  if (n % 2 === 1) {
+    // Ímpar: (n-1)/2 duplas + 1 impostor
+    pairCount = Math.floor(n / 2);
+    impostorCount = 1;
+  } else {
+    // Par: n/2 - 1 duplas + 2 impostores
+    pairCount = n / 2 - 1;
+    impostorCount = 2;
   }
 
-  if (playerIds.length === 4) {
-    const pairA = shuffled[0];
-    const pairB = shuffled[1];
-    const solo = shuffled[2];
-    const impostor = shuffled[3];
-    return {
-      pairs: { [pairA]: pairB, [pairB]: pairA },
-      impostorIds: [impostor],
-      soloPlayerId: solo,
-    };
+  const pairs: Record<string, string> = {};
+  let idx = 0;
+  for (let i = 0; i < pairCount; i++) {
+    const a = shuffled[idx++];
+    const b = shuffled[idx++];
+    pairs[a] = b;
+    pairs[b] = a;
   }
 
-  const pairA = shuffled[0];
-  const pairB = shuffled[1];
-  const impostor = shuffled[2];
-  return {
-    pairs: { [pairA]: pairB, [pairB]: pairA },
-    impostorIds: [impostor],
-    soloPlayerId: shuffled[3],
-  };
+  const impostorIds = shuffled.slice(idx, idx + impostorCount);
+
+  return { pairs, impostorIds, pairCount };
+}
+
+export function buildPlayerWords(
+  pairs: Record<string, string>,
+  impostorIds: string[],
+  wordSets: WordSet[]
+): { playerWords: Record<string, string>; theme: string } {
+  const playerWords: Record<string, string> = {};
+  const pairPlayers = Object.keys(pairs);
+  const themes = new Set<string>();
+
+  // Distribuir palavras para duplas
+  let wordSetIdx = 0;
+  const usedPairs = new Set<string>();
+  for (const [a, b] of Object.entries(pairs)) {
+    if (usedPairs.has(a)) continue;
+    usedPairs.add(a);
+    usedPairs.add(b);
+    const ws = wordSets[wordSetIdx++];
+    playerWords[a] = ws.pairWord;
+    playerWords[b] = ws.pairWord;
+    themes.add(ws.theme);
+  }
+
+  // Distribuir palavras para impostores (usam outsiderWord de uma das entradas sorteadas)
+  const impostorWordSet = wordSets[Math.floor(Math.random() * wordSets.length)];
+  for (const id of impostorIds) {
+    playerWords[id] = impostorWordSet.outsiderWord;
+  }
+  themes.add(impostorWordSet.theme);
+
+  return { playerWords, theme: Array.from(themes).join(' / ') };
 }
 
 export function getNextTurnPlayer(

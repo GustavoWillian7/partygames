@@ -19,26 +19,26 @@ export default function GameCard({
 }: GameCardProps) {
   return (
     <motion.button
-      whileHover={disabled ? {} : { scale: 1.03, y: -4 }}
+      whileHover={disabled ? {} : { scale: 1.02, y: -2 }}
       whileTap={disabled ? {} : { scale: 0.98 }}
       onClick={onClick}
       disabled={disabled}
       className={`
-        relative overflow-hidden rounded-2xl p-6 text-left
-        glass-card border border-glassBorder
+        relative overflow-hidden rounded-xl p-5 text-left
+        glass border border-white/[0.08]
         transition-all duration-300
-        ${disabled ? 'opacity-50 cursor-not-allowed' : 'cursor-pointer hover:border-primary/50 hover:shadow-lg hover:shadow-primary/10'}
+        ${disabled ? 'opacity-40 cursor-not-allowed' : 'cursor-pointer hover:border-primary/40 hover:shadow-lg hover:shadow-primary/10'}
       `}
     >
-      {/* Glow effect */}
-      <div className="absolute inset-0 bg-gradient-to-br from-primary/5 to-transparent opacity-0 hover:opacity-100 transition-opacity duration-500" />
+      {/* Subtle top gradient line */}
+      <div className="absolute top-0 left-4 right-4 h-px bg-gradient-to-r from-transparent via-primary/30 to-transparent" />
 
       <div className="relative z-10">
-        <div className="text-4xl mb-3">{icon}</div>
-        <h3 className="text-lg font-bold text-text mb-1">{title}</h3>
-        <p className="text-sm text-muted mb-3">{description}</p>
+        <div className="text-3xl mb-3">{icon}</div>
+        <h3 className="text-base font-bold text-text mb-1 font-display">{title}</h3>
+        <p className="text-sm text-muted mb-3 leading-relaxed">{description}</p>
         <div className="flex items-center gap-2">
-          <span className="text-xs bg-surfaceSolid/50 text-muted px-2 py-1 rounded-full">
+          <span className="text-xs bg-surface text-muted px-2.5 py-1 rounded-full border border-white/[0.06]">
             Min. {minPlayers} jogadores
           </span>
         </div>

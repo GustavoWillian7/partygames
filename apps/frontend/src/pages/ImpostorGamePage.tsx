@@ -14,7 +14,7 @@ import Badge from '../components/ui/Badge';
 export default function ImpostorGamePage() {
   const { state, error, sendClue, submitVote, isWinner, currentPlayerId } = useImpostorGame();
   useAuthStore();
-  const { clearRoom } = useRoomStore();
+  const { currentRoom, clearRoom } = useRoomStore();
   const navigate = useNavigate();
   const [clueInput, setClueInput] = useState('');
   const [hasVoted, setHasVoted] = useState(false);
@@ -92,8 +92,8 @@ export default function ImpostorGamePage() {
         )}
 
         <AnimatePresence mode="wait">
-          {/* FASE DE DICAS */}
-          {(state.phase === 'setup' || state.phase === 'playing') && (
+          {/* FASE DE DICAS E VOTAÇÃO */}
+          {(state.phase === 'setup' || state.phase === 'playing' || state.phase === 'voting') && (
             <motion.div
               key="playing"
               initial={{ opacity: 0, x: 20 }}
@@ -386,8 +386,20 @@ export default function ImpostorGamePage() {
                   </motion.div>
                 )}
 
-                <NeonButton onClick={handleLeave} variant="primary" size="lg" fullWidth>
-                  Voltar ao Início
+                <NeonButton
+                  onClick={() => {
+                    const roomId = currentRoom?.id;
+                    if (roomId) navigate(`/room/${roomId}`);
+                    else navigate('/');
+                  }}
+                  variant="primary"
+                  size="lg"
+                  fullWidth
+                >
+                  Voltar à Sala
+                </NeonButton>
+                <NeonButton onClick={handleLeave} variant="ghost" size="sm" fullWidth glow={false} className="mt-2">
+                  Sair da Sala
                 </NeonButton>
               </GlassCard>
             </motion.div>

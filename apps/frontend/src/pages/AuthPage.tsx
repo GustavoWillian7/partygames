@@ -3,14 +3,8 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/useAuthStore';
 import { connectSocket } from '../socket/socketManager';
-import GlassCard from '../components/ui/GlassCard';
-import NeonButton from '../components/ui/NeonButton';
 import GlowInput from '../components/ui/GlowInput';
 import ToastNotification from '../components/ui/ToastNotification';
-
-type AuthMode = 'login' | 'register' | 'guest';
-
-const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
 
 const tabVariants = {
   enter: { opacity: 0, x: 20 },
@@ -19,7 +13,7 @@ const tabVariants = {
 };
 
 export default function AuthPage() {
-  const [mode, setMode] = useState<AuthMode>('login');
+  const [mode, setMode] = useState<'login' | 'register' | 'guest'>('login');
   const [name, setName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -32,6 +26,7 @@ export default function AuthPage() {
     setLoading(true);
 
     try {
+      const API_URL = import.meta.env.VITE_API_URL || 'http://localhost:3001';
       let endpoint = '';
       let body: Record<string, string> = {};
 
@@ -54,159 +49,206 @@ export default function AuthPage() {
 
       const data = await res.json();
       if (!res.ok) {
-        throw new Error(data.error || 'Authentication failed');
+        throw new Error(data.error || 'Falha na autenticação');
       }
 
       setAuth(data.token, data.player);
       connectSocket(data.token);
       navigate('/');
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error');
+      setError(err instanceof Error ? err.message : 'Erro desconhecido');
     } finally {
       setLoading(false);
     }
   };
 
-  const modes: { key: AuthMode; label: string }[] = [
+  const modes: { key: typeof mode; label: string }[] = [
     { key: 'login', label: 'Entrar' },
     { key: 'register', label: 'Criar conta' },
     { key: 'guest', label: 'Convidado' },
   ];
 
   return (
-    <div className="min-h-screen flex items-center justify-center px-4 py-12">
-      <motion.div
-        initial={{ opacity: 0, y: 30 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.6, ease: [0.175, 0.885, 0.32, 1.275] }}
-        className="w-full max-w-md"
-      >
-        {/* Logo */}
-        <div className="text-center mb-8">
+    <div className="min-h-screen flex flex-col lg:flex-row bg-background noise">
+      {/* === LADO ESQUERDO: BRANDING === */}
+      <div className="relative flex-1 flex flex-col justify-center items-start px-8 py-12 lg:px-16 lg:py-0 overflow-hidden">
+        {/* Decorative orbs */}
+        <div className="orb orb-1 opacity-20" />
+        <div className="orb orb-2 opacity-15" />
+
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.6, ease: [0.175, 0.885, 0.32, 1.275] }}
+          className="relative z-10 max-w-md"
+        >
+          {/* Logo */}
           <motion.div
-            initial={{ scale: 0 }}
-            animate={{ scale: 1 }}
-            transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
-            className="inline-block mb-4"
+            initial={{ scale: 0.8, opacity: 0 }}
+            animate={{ scale: 1, opacity: 1 }}
+            transition={{ type: 'spring', stiffness: 200, delay: 0.1 }}
+            className="mb-8"
           >
-            <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary to-accent flex items-center justify-center shadow-lg shadow-primary/30">
-              <span className="text-4xl">🎮</span>
+            <h1 className="font-display text-5xl lg:text-6xl font-bold text-gradient tracking-tight">
+              PartyGames
+            </h1>
+            <p className="text-muted text-lg mt-2 font-light">
+              Jogue com seus amigos. A qualquer hora.
+            </p>
+          </motion.div>
+
+          {/* Emoji stack */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.4 }}
+            className="flex items-center gap-3 mb-8"
+          >
+            {['🎮', '🎯', '🎲', '🎭'].map((emoji, i) => (
+              <motion.span
+                key={i}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: 0.5 + i * 0.08 }}
+                className="text-3xl"
+              >
+                {emoji}
+              </motion.span>
+            ))}
+          </motion.div>
+
+          {/* Tagline bullets */}
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="space-y-3 text-sm text-muted"
+          >
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent-alt"></span>
+              Salas privadas com código de 4 caracteres
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-accent"></span>
+              Jogue sem cadastro como convidado
+            </div>
+            <div className="flex items-center gap-2">
+              <span className="w-1.5 h-1.5 rounded-full bg-primary-light"></span>
+              Modo Impostor e Encontre sua Dupla
             </div>
           </motion.div>
-          <h1 className="text-4xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary via-accent to-primary-light neon-text">
-            PartyGames
-          </h1>
-          <p className="text-muted mt-2">Jogue com seus amigos!</p>
-        </div>
+        </motion.div>
+      </div>
 
-        <GlassCard variant="strong" className="p-8">
-          {/* Tabs */}
-          <div className="flex gap-2 mb-6 p-1 bg-background/50 rounded-xl">
-            {modes.map((m) => (
-              <button
-                key={m.key}
-                type="button"
-                onClick={() => { setMode(m.key); setError(null); }}
-                className={`
-                  flex-1 py-2.5 rounded-lg text-sm font-semibold transition-all duration-300
-                  ${mode === m.key
-                    ? 'bg-primary text-white shadow-lg shadow-primary/30'
-                    : 'text-muted hover:text-text'
-                  }
-                `}
+      {/* === DIVIDER (desktop only) === */}
+      <div className="hidden lg:block w-px bg-gradient-to-b from-transparent via-white/10 to-transparent self-stretch my-12" />
+
+      {/* === LADO DIREITO: FORMULÁRIO === */}
+      <div className="flex-1 flex items-center justify-center px-6 py-8 lg:px-12">
+        <motion.div
+          initial={{ opacity: 0, y: 20 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.5, delay: 0.2 }}
+          className="w-full max-w-md"
+        >
+          <div className="glass-strong rounded-xl p-6 lg:p-8">
+            {/* Tabs */}
+            <div className="flex gap-1 mb-6 p-1 bg-background/50 rounded-lg">
+              {modes.map((m) => (
+                <button
+                  key={m.key}
+                  type="button"
+                  onClick={() => { setMode(m.key); setError(null); }}
+                  className={`
+                    flex-1 py-2 rounded-md text-sm font-medium transition-all duration-300
+                    ${mode === m.key
+                      ? 'bg-primary/15 text-primary border border-primary/30'
+                      : 'text-muted hover:text-text hover:bg-white/5'
+                    }
+                  `}
+                >
+                  {m.label}
+                </button>
+              ))}
+            </div>
+
+            <AnimatePresence mode="wait">
+              <motion.form
+                key={mode}
+                variants={tabVariants}
+                initial="enter"
+                animate="center"
+                exit="exit"
+                transition={{ duration: 0.25 }}
+                onSubmit={handleSubmit}
+                className="space-y-4"
               >
-                {m.label}
-              </button>
-            ))}
-          </div>
-
-          <AnimatePresence mode="wait">
-            <motion.form
-              key={mode}
-              variants={tabVariants}
-              initial="enter"
-              animate="center"
-              exit="exit"
-              transition={{ duration: 0.3 }}
-              onSubmit={handleSubmit}
-              className="space-y-4"
-            >
-              {(mode === 'register' || mode === 'guest') && (
-                <GlowInput
-                  label="Nome"
-                  type="text"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
-                  required
-                  placeholder="Seu nickname"
-                />
-              )}
-
-              {mode !== 'guest' && (
-                <>
+                {(mode === 'register' || mode === 'guest') && (
                   <GlowInput
-                    label="Email"
-                    type="email"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
+                    label="Nome"
+                    type="text"
+                    value={name}
+                    onChange={(e) => setName(e.target.value)}
                     required
-                    placeholder="seu@email.com"
+                    placeholder="Seu nickname"
                   />
-                  <GlowInput
-                    label="Senha"
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    placeholder="********"
-                  />
-                </>
-              )}
-
-              <ToastNotification show={!!error} variant="error">
-                {error}
-              </ToastNotification>
-
-              <NeonButton
-                type="submit"
-                variant="primary"
-                size="lg"
-                fullWidth
-                disabled={isLoading}
-                className="mt-2"
-              >
-                {isLoading ? (
-                  <span className="flex items-center justify-center gap-2">
-                    <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
-                    Carregando...
-                  </span>
-                ) : mode === 'login' ? (
-                  'Entrar'
-                ) : mode === 'register' ? (
-                  'Criar conta'
-                ) : (
-                  'Jogar como convidado'
                 )}
-              </NeonButton>
-            </motion.form>
-          </AnimatePresence>
-        </GlassCard>
 
-        {/* Decorative elements */}
-        <div className="flex justify-center gap-4 mt-8">
-          {['🎯', '🎲', '🎭', '🎪'].map((emoji, i) => (
-            <motion.span
-              key={i}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.5 + i * 0.1 }}
-              className="text-2xl"
-            >
-              {emoji}
-            </motion.span>
-          ))}
-        </div>
-      </motion.div>
+                {mode !== 'guest' && (
+                  <>
+                    <GlowInput
+                      label="Email"
+                      type="email"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                      placeholder="seu@email.com"
+                    />
+                    <GlowInput
+                      label="Senha"
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      placeholder="********"
+                    />
+                  </>
+                )}
+
+                <ToastNotification show={!!error} variant="error">
+                  {error}
+                </ToastNotification>
+
+                <button
+                  type="submit"
+                  disabled={isLoading}
+                  className="
+                    w-full py-3 rounded-lg font-semibold text-sm
+                    border border-primary/40 text-primary
+                    bg-transparent btn-fill btn-fill-primary
+                    transition-all duration-300
+                    hover:text-white
+                    disabled:opacity-40 disabled:cursor-not-allowed
+                  "
+                >
+                  {isLoading ? (
+                    <span className="flex items-center justify-center gap-2">
+                      <span className="w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                      Carregando...
+                    </span>
+                  ) : mode === 'login' ? (
+                    'Entrar'
+                  ) : mode === 'register' ? (
+                    'Criar conta'
+                  ) : (
+                    'Jogar como convidado'
+                  )}
+                </button>
+              </motion.form>
+            </AnimatePresence>
+          </div>
+        </motion.div>
+      </div>
     </div>
   );
 }

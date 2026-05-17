@@ -13,39 +13,50 @@ interface NeonButtonProps {
   onClick?: () => void;
 }
 
-const variantClasses = {
-  primary: 'bg-primary/20 text-primary border-primary/50 hover:bg-primary/30 hover:border-primary',
-  accent: 'bg-accent/20 text-accent border-accent/50 hover:bg-accent/30 hover:border-accent',
-  danger: 'bg-danger/20 text-danger border-danger/50 hover:bg-danger/30 hover:border-danger',
-  ghost: 'bg-transparent text-muted border-transparent hover:text-text hover:bg-surface/50',
+const variantBase = {
+  primary: 'border-primary/40 text-primary hover:text-white',
+  accent: 'border-accent/40 text-accent hover:text-background',
+  danger: 'border-danger/40 text-danger hover:text-white',
+  ghost: 'border-transparent text-muted hover:text-text hover:border-white/10',
+};
+
+const variantFill = {
+  primary: 'btn-fill-primary',
+  accent: 'btn-fill-accent',
+  danger: 'btn-fill-danger',
+  ghost: '',
 };
 
 const sizeClasses = {
   sm: 'px-3 py-1.5 text-sm',
-  md: 'px-4 py-2.5 text-base',
-  lg: 'px-6 py-3 text-lg',
+  md: 'px-5 py-2.5 text-base',
+  lg: 'px-7 py-3 text-lg',
 };
 
 export default function NeonButton({
   children,
   variant = 'primary',
   size = 'md',
-  glow = true,
+  glow = false,
   fullWidth = false,
   className = '',
   ...props
 }: NeonButtonProps) {
+  const isGhost = variant === 'ghost';
+
   return (
     <motion.button
-      whileHover={props.disabled ? {} : { scale: 1.02 }}
+      whileHover={props.disabled ? {} : { scale: 1.01 }}
       whileTap={props.disabled ? {} : { scale: 0.98 }}
       className={`
-        rounded-xl font-semibold border transition-all duration-300
-        ${variantClasses[variant]}
+        relative overflow-hidden rounded-lg font-semibold border
+        bg-transparent transition-all duration-300
+        ${variantBase[variant]}
+        ${!isGhost ? 'btn-fill ' + variantFill[variant] : ''}
         ${sizeClasses[size]}
-        ${glow ? 'btn-glow' : ''}
+        ${glow ? 'glow-' + variant : ''}
         ${fullWidth ? 'w-full' : ''}
-        disabled:opacity-50 disabled:cursor-not-allowed disabled:hover:scale-100
+        disabled:opacity-40 disabled:cursor-not-allowed disabled:hover:scale-100
         ${className}
       `}
       {...props}

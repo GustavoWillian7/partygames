@@ -10,15 +10,15 @@ interface AvatarOrbProps {
 }
 
 const sizeClasses = {
-  sm: 'w-8 h-8 text-xs',
-  md: 'w-10 h-10 text-sm',
-  lg: 'w-14 h-14 text-base',
+  sm: 'w-9 h-9 text-xs',
+  md: 'w-11 h-11 text-sm',
+  lg: 'w-16 h-16 text-base',
 };
 
 const statusColors = {
-  online: 'bg-success',
+  online: 'bg-accent-alt',
   disconnected: 'bg-danger',
-  spectator: 'bg-info',
+  spectator: 'bg-warning',
   eliminated: 'bg-muted',
 };
 
@@ -39,16 +39,32 @@ export default function AvatarOrb({
 
   return (
     <motion.div
-      whileHover={{ scale: 1.1 }}
-      className={`relative inline-flex flex-col items-center gap-1 ${className}`}
+      whileHover={{ scale: 1.05 }}
+      className={`relative inline-flex flex-col items-center gap-1.5 ${className}`}
     >
       <div
         className={`
-          avatar-orb ${sizeClasses[size]}
-          ${status === 'eliminated' ? 'opacity-50 grayscale' : ''}
+          relative flex items-center justify-center rounded-full
+          ${sizeClasses[size]}
+          ${status === 'eliminated' ? 'opacity-40 grayscale' : ''}
+          bg-surface font-bold text-text
         `}
+        style={{
+          border: '2px solid transparent',
+          backgroundClip: 'padding-box',
+        }}
       >
-        <span className="relative z-10 text-text font-bold">{initials}</span>
+        <span className="relative z-10">{initials}</span>
+
+        {/* Gradient border ring */}
+        <div
+          className="absolute inset-[-2px] rounded-full -z-10"
+          style={{
+            background: 'linear-gradient(135deg, #7C3AED, #22D3EE)',
+            opacity: status === 'eliminated' ? 0.2 : 0.5,
+          }}
+        />
+
         {/* Status dot */}
         <div
           className={`
@@ -58,12 +74,13 @@ export default function AvatarOrb({
           `}
         />
       </div>
+
       <div className="flex items-center gap-1">
         <span className={`text-xs ${isYou ? 'text-primary font-medium' : 'text-muted'}`}>
           {isYou ? 'Você' : name}
         </span>
         {isHost && (
-          <span className="text-[10px] bg-primary/20 text-primary px-1.5 py-0.5 rounded-full">
+          <span className="text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full border border-primary/30">
             Host
           </span>
         )}

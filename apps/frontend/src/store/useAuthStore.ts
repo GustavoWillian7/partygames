@@ -25,22 +25,37 @@ interface AuthState {
   setLoading: (loading: boolean) => void;
 }
 
+function getStoredPlayer(): PlayerProfile | null {
+  try {
+    const raw = localStorage.getItem('player');
+    if (!raw) return null;
+    return JSON.parse(raw) as PlayerProfile;
+  } catch {
+    return null;
+  }
+}
+
 export const useAuthStore = create<AuthState>((set) => ({
   token: localStorage.getItem('token'),
-  player: null,
+  player: getStoredPlayer(),
   isLoading: false,
   error: null,
   setToken: (token) => {
     localStorage.setItem('token', token);
     set({ token });
   },
-  setPlayer: (player) => set({ player }),
+  setPlayer: (player) => {
+    localStorage.setItem('player', JSON.stringify(player));
+    set({ player });
+  },
   setAuth: (token, player) => {
     localStorage.setItem('token', token);
+    localStorage.setItem('player', JSON.stringify(player));
     set({ token, player, error: null });
   },
   clearAuth: () => {
     localStorage.removeItem('token');
+    localStorage.removeItem('player');
     set({ token: null, player: null, error: null });
   },
   setError: (error) => set({ error }),
