@@ -1,4 +1,4 @@
-# PartyGames — Claude Skills
+# PastelariaGames — Claude Skills
 
 > Comandos customizados disponíveis para automação de tarefas recorrentes no projeto.
 

@@ -1,4 +1,4 @@
-# PartyGames — Bíblia do Projeto
+# PastelariaGames — Bíblia do Projeto
 
 > Documento vivo. Atualizar a cada decisão arquitetural, mudança de stack ou novo jogo.
 > Versão: 1.5.0 — 2026-05-17
@@ -602,7 +602,7 @@ colors: {
 ### 9.3 Layouts das Telas Principais
 
 **AuthPage** — Split-Screen:
-- **Esquerda (~50%)**: Branding — logo "PartyGames" em `Space Grotesk` com `text-gradient` (roxo → cyan), tagline, stack de emojis, bullets de features com dots coloridos, orbs decorativos sutis
+- **Esquerda (~50%)**: Branding — logo "PastelariaGames" em `Space Grotesk` com `text-gradient` (roxo → cyan), tagline, stack de emojis, bullets de features com dots coloridos, orbs decorativos sutis
 - **Direita (~50%)**: Formulário em `glass-strong rounded-xl`, tabs (login/register/guest), botão com `btn-fill-primary`
 - **Mobile**: empilha verticalmente
 

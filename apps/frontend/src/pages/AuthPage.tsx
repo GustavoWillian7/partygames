@@ -90,7 +90,7 @@ export default function AuthPage() {
             className="mb-8"
           >
             <h1 className="font-display text-5xl lg:text-6xl font-bold text-gradient tracking-tight">
-              PartyGames
+              PastelariaGames
             </h1>
             <p className="text-muted text-lg mt-2 font-light">
               Jogue com seus amigos. A qualquer hora.

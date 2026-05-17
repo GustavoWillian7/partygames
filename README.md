@@ -1,6 +1,6 @@
-# PartyGames
+# PastelariaGames
 
-Monorepo da plataforma PartyGames — jogos multiplayer para jogar com amigos.
+Monorepo da plataforma PastelariaGames — jogos multiplayer para jogar com amigos.
 
 ## Estrutura
 

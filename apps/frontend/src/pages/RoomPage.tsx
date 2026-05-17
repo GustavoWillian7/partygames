@@ -121,7 +121,7 @@ export default function RoomPage() {
       {/* === MOBILE HEADER === */}
       <div className="lg:hidden relative z-20 flex items-center justify-between px-4 py-3 border-b border-white/[0.06]">
         <div className="flex items-center gap-2">
-          <span className="font-display font-bold text-gradient">PartyGames</span>
+          <span className="font-display font-bold text-gradient">PastelariaGames</span>
         </div>
         <button
           onClick={() => setSidebarOpen(!sidebarOpen)}

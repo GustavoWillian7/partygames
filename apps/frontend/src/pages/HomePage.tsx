@@ -86,7 +86,7 @@ export default function HomePage() {
           >
             <span className="text-2xl">🎮</span>
             <h1 className="font-display text-xl font-bold text-gradient tracking-tight">
-              PartyGames
+              PastelariaGames
             </h1>
           </motion.div>
 
