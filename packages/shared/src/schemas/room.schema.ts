@@ -8,6 +8,7 @@ export const roomSettingsSchema = z.object({
   roundTimeSeconds: z.number().int().min(10).max(300).default(60),
   allowReconnection: z.boolean().default(true),
   isPublic: z.boolean().default(false),
+  themeGroup: z.string().optional(),
 });
 
 export const roomSchema = z.object({

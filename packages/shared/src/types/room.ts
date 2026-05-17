@@ -6,6 +6,7 @@ export interface RoomSettings {
   roundTimeSeconds: number;
   allowReconnection: boolean;
   isPublic: boolean;
+  themeGroup?: string;
 }
 
 export interface Room {

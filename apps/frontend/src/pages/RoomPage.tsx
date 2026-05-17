@@ -13,6 +13,23 @@ import GameCard from '../components/ui/GameCard';
 import SectionTitle from '../components/ui/SectionTitle';
 import type { RoomSettings } from '@partygames/shared';
 
+const THEME_GROUPS = [
+  { id: 'all', name: 'Aleatório' },
+  { id: 'harry-potter', name: 'Harry Potter' },
+  { id: 'animais', name: 'Animais' },
+  { id: 'esportes', name: 'Esportes' },
+  { id: 'comidas', name: 'Comidas' },
+  { id: 'filmes', name: 'Filmes' },
+  { id: 'animes', name: 'Animes' },
+  { id: 'jogos', name: 'Jogos' },
+  { id: 'series', name: 'Séries' },
+  { id: 'futebol', name: 'Futebol' },
+  { id: 'musica', name: 'Música' },
+  { id: 'tecnologia', name: 'Tecnologia' },
+  { id: 'livros', name: 'Livros' },
+  { id: 'mitologia', name: 'Mitologia' },
+];
+
 export default function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
@@ -208,6 +225,22 @@ export default function RoomPage() {
                       value={settingsForm.roundTimeSeconds ?? currentRoom.settings.roundTimeSeconds}
                       onChange={(e) => setSettingsForm({ ...settingsForm, roundTimeSeconds: parseInt(e.target.value) })}
                     />
+
+                    <div>
+                      <label className="block text-sm text-muted mb-2">Grupo de temas</label>
+                      <select
+                        value={settingsForm.themeGroup ?? currentRoom.settings.themeGroup ?? 'all'}
+                        onChange={(e) => setSettingsForm({ ...settingsForm, themeGroup: e.target.value })}
+                        className="w-full px-4 py-2 rounded-xl bg-background/80 border border-glassBorder text-text focus:outline-none focus:border-primary"
+                      >
+                        {THEME_GROUPS.map((g) => (
+                          <option key={g.id} value={g.id}>{g.name}</option>
+                        ))}
+                      </select>
+                      <p className="text-[11px] text-muted mt-1">
+                        Define o conjunto de palavras usado no jogo.
+                      </p>
+                    </div>
 
                     <label className="flex items-center gap-3 cursor-pointer">
                       <input

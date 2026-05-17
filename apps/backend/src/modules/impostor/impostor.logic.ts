@@ -1,25 +1,11 @@
 import type { Player } from '@partygames/shared';
+import { getThemeGroup } from '../../data/themeGroups';
 
-const WORD_BANK: { word: string; theme: string }[] = [
-  { word: 'Leão', theme: 'Animais da savana' },
-  { word: 'Pizza', theme: 'Comidas italianas' },
-  { word: 'Guitarra', theme: 'Instrumentos musicais' },
-  { word: 'Nike', theme: 'Marcas de roupa' },
-  { word: 'Titanic', theme: 'Filmes famosos' },
-  { word: 'Tênis', theme: 'Esportes olímpicos' },
-  { word: 'Cachorro', theme: 'Animais domésticos' },
-  { word: 'Brasil', theme: 'Países da América do Sul' },
-  { word: 'Café', theme: 'Bebidas quentes' },
-  { word: 'Bicicleta', theme: 'Meios de transporte' },
-  { word: 'Harry Potter', theme: 'Livros famosos' },
-  { word: 'Verão', theme: 'Estações do ano' },
-  { word: 'Piano', theme: 'Instrumentos de teclas' },
-  { word: 'Montanha', theme: 'Formações geográficas' },
-  { word: 'Superman', theme: 'Heróis da DC Comics' },
-];
-
-export function pickWord(): { word: string; theme: string } {
-  return WORD_BANK[Math.floor(Math.random() * WORD_BANK.length)];
+export function pickWord(themeGroupId?: string): { word: string; theme: string } {
+  const group = getThemeGroup(themeGroupId ?? 'all');
+  const entries = group?.entries.length ? group.entries : getThemeGroup('all')!.entries;
+  const entry = entries[Math.floor(Math.random() * entries.length)];
+  return entry.impostor;
 }
 
 export function assignImpostors(
@@ -137,8 +123,8 @@ export function buildGamePayload(
     timeRemaining: game.status === 'playing' && game.roundTimerEndsAt
       ? Math.max(0, Math.ceil((game.roundTimerEndsAt - Date.now()) / 1000))
       : game.status === 'voting' && game.votingTimerEndsAt
-      ? Math.max(0, Math.ceil((game.votingTimerEndsAt - Date.now()) / 1000))
-      : 0,
+        ? Math.max(0, Math.ceil((game.votingTimerEndsAt - Date.now()) / 1000))
+        : 0,
     players: roomPlayers.map((p) => ({
       id: p.id,
       name: p.name,

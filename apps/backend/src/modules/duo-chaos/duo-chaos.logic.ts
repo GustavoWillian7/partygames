@@ -1,26 +1,11 @@
 import type { Player } from '@partygames/shared';
+import { getThemeGroup } from '../../data/themeGroups';
 
-const WORD_BANK: { pairWord: string; outsiderWord: string; theme: string }[] = [
-  { pairWord: 'Cachorro', outsiderWord: 'Gato', theme: 'Animais domésticos' },
-  { pairWord: 'Messi', outsiderWord: 'CR7', theme: 'Jogadores de futebol' },
-  { pairWord: 'Pizza', outsiderWord: 'Lasanha', theme: 'Comidas italianas' },
-  { pairWord: 'Leão', outsiderWord: 'Tigre', theme: 'Felinos' },
-  { pairWord: 'Guitarra', outsiderWord: 'Violão', theme: 'Instrumentos de corda' },
-  { pairWord: 'Nike', outsiderWord: 'Adidas', theme: 'Marcas de roupa' },
-  { pairWord: 'Titanic', outsiderWord: 'Avatar', theme: 'Filmes famosos' },
-  { pairWord: 'Tênis', outsiderWord: 'Futebol', theme: 'Esportes' },
-  { pairWord: 'Brasil', outsiderWord: 'Argentina', theme: 'Países da América do Sul' },
-  { pairWord: 'Café', outsiderWord: 'Chá', theme: 'Bebidas quentes' },
-  { pairWord: 'Bicicleta', outsiderWord: 'Moto', theme: 'Meios de transporte' },
-  { pairWord: 'Harry Potter', outsiderWord: 'Senhor dos Anéis', theme: 'Livros famosos' },
-  { pairWord: 'Verão', outsiderWord: 'Inverno', theme: 'Estações do ano' },
-  { pairWord: 'Piano', outsiderWord: 'Órgão', theme: 'Instrumentos de teclas' },
-  { pairWord: 'Montanha', outsiderWord: 'Praia', theme: 'Lugares para viajar' },
-  { pairWord: 'Superman', outsiderWord: 'Batman', theme: 'Heróis da DC Comics' },
-];
-
-export function pickWords(): { pairWord: string; outsiderWord: string; theme: string } {
-  return WORD_BANK[Math.floor(Math.random() * WORD_BANK.length)];
+export function pickWords(themeGroupId?: string): { pairWord: string; outsiderWord: string; theme: string } {
+  const group = getThemeGroup(themeGroupId ?? 'all');
+  const entries = group?.entries.length ? group.entries : getThemeGroup('all')!.entries;
+  const entry = entries[Math.floor(Math.random() * entries.length)];
+  return entry.duoChaos;
 }
 
 export function getPlayerWord(

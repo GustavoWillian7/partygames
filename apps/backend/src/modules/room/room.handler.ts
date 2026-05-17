@@ -184,10 +184,10 @@ export function roomHandler(io: SocketServer, socket: Socket) {
       // Inicializar jogo específico
       if (data.gameType === 'impostor') {
         const callbacks = buildImpostorCallbacks(io, roomId);
-        await impostorService.startGame(roomId, room.players, callbacks);
+        await impostorService.startGame(roomId, room.players, callbacks, room.settings.themeGroup);
       } else if (data.gameType === 'duo-chaos') {
         const callbacks = buildDuoChaosCallbacks(io, roomId);
-        await duoChaosService.startGame(roomId, room.players, callbacks);
+        await duoChaosService.startGame(roomId, room.players, callbacks, room.settings.themeGroup);
       }
 
       io.to(room.id).emit('room:state', room);

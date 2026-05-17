@@ -1,7 +1,7 @@
 # PartyGames — Bíblia do Projeto
 
 > Documento vivo. Atualizar a cada decisão arquitetural, mudança de stack ou novo jogo.
-> Versão: 1.1.0 — 2026-05-10
+> Versão: 1.2.0 — 2026-05-17
 
 ---
 
@@ -169,6 +169,9 @@ backend/
 │   │   ├── redis.ts            # Cliente ioredis (pub/sub + estado)
 │   │   └── mongo.ts            # Conexão Mongoose (preparada, não usada ainda)
 │   │
+│   ├── data/                   # Bancos de dados hard-coded
+│   │   └── themeGroups.ts      # Grupos de temas e palavras para os jogos
+│   │
 │   ├── middleware/             # Express middlewares
 │   │   ├── errorHandler.ts
 │   │   ├── authMiddleware.ts   # Validação JWT REST
@@ -197,7 +200,7 @@ backend/
 └── package.json
 ```
 
-> **Nota:** Módulos `impostor/` e `duo-chaos/` ainda não criados. Estrutura prevista mantida para implementação futura.
+> **Nota:** Módulos `impostor/` e `duo-chaos/` criados e funcionais em `modules/`. Banco de palavras centralizado em `data/themeGroups.ts` com suporte a grupos de temas configuráveis.
 
 ### 4.3 Front-end (`/frontend`) — Implementado
 
@@ -310,6 +313,7 @@ export interface RoomSettings {
   roundTimeSeconds: number;      // Tempo por rodada (padrão: 60s)
   allowReconnection: boolean;    // true (padrão)
   isPublic: boolean;             // false = privada (padrão)
+  themeGroup?: string;           // Grupo de temas para sorteio de palavras (ex: 'harry-potter', 'filmes')
 }
 
 export interface Room {
@@ -623,6 +627,12 @@ colors: {
   - [x] Hook `useDuoChaosGame` com timers e sincronização socket
   - [x] Eventos adicionais: `duo-chaos:request-state`, `duo-chaos:state`
 - [x] Telas de votação e resultado dos jogos (ambos concluídos)
+- [x] Sistema de grupos de temas (theme groups)
+  - [x] Banco hard-coded em `data/themeGroups.ts` com 14 grupos (Harry Potter, Animais, Esportes, Comidas, Filmes, Animes, Jogos, Séries, Futebol, Música, Tecnologia, Livros, Mitologia + Aleatório)
+  - [x] Cada grupo com 22 entradas para Impostor e Duo Chaos
+  - [x] `themeGroup` adicionado a `RoomSettings` (shared + backend + frontend)
+  - [x] Dropdown de seleção de tema no lobby (RoomPage.tsx)
+  - [x] Lógica de sorteio filtra por grupo escolhido
 - [ ] Testes de integração dos fluxos Socket
 - [ ] Deploy inicial (ambiente de amigos)
 
@@ -644,7 +654,7 @@ colors: {
 
 ---
 
-## 12. Estado Atual & Bloqueios Conhecidos (2026-05-10)
+## 12. Estado Atual & Bloqueios Conhecidos (2026-05-17)
 
 | Item | Status | Detalhe |
 |------|--------|---------|
@@ -669,6 +679,7 @@ colors: {
 | Sala volta ao lobby após game over | ✅ Corrigido (v1.3) | Ambos os jogos agora chamam `onGameFinished` ao terminar, que atualiza a sala para `status: 'waiting'` e `currentGame: undefined`. Frontend emite `room:leave` ao clicar "Voltar ao Início", limpando o estado local |
 | Impostor recebe tema | ✅ Corrigido (v1.3) | Adicionado `isImpostor` ao tipo `ServerEvents` do Socket.io (`impostor:round-start` e `impostor:state`). Agora o frontend identifica corretamente quem é impostor e mostra o tema |
 | Marcar dupla só após 1 rodada | ✅ Corrigido (v1.3) | No Duo Chaos, `markPair` agora verifica se todos os jogadores falaram pelo menos 1 palavra (`chatHistory` tem entrada de cada `activePlayerId`). Se não, retorna erro "Aguarde todos os jogadores falarem pelo menos 1 vez" |
+| Grupos de temas | ✅ Implementado (v1.4) | Host pode escolher um grupo de temas no lobby (`themeGroup` em `RoomSettings`). O sorteio de palavras filtra pelo grupo escolhido. 14 grupos disponíveis com ~22 entradas cada. Fallback para "Aleatório" se nenhum grupo for selecionado |
 
 ### Próximo passo recomendado
 1. Adicionar testes de integração automatizados (jest + socket.io-client) para regressão futura.
@@ -676,4 +687,4 @@ colors: {
 
 ---
 
-*Última atualização: 2026-05-10 (v1.3 — correções de navegação pós-jogo, identificação de impostor e regra de marcação de dupla)*
+*Última atualização: 2026-05-17 (v1.4 — sistema de grupos de temas, expansão do banco de palavras para 14 grupos com ~22 entradas cada, atualização do briefing)*

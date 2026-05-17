@@ -1,6 +1,7 @@
 # Local guides and prompts
 prompt.md
 proximos-passos.md
+docs/
 
 # Dependencies
 node_modules
@@ -51,7 +52,3 @@ coverage
 .cache
 .temp
 *.tsbuildinfo
-
-# Erro
-
-erro.txt

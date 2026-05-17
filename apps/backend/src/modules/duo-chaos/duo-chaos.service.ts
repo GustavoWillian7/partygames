@@ -52,12 +52,12 @@ export interface DuoChaosCallbacks {
 }
 
 export const duoChaosService = {
-  async startGame(roomId: string, players: Player[], callbacks: DuoChaosCallbacks): Promise<void> {
+  async startGame(roomId: string, players: Player[], callbacks: DuoChaosCallbacks, themeGroup?: string): Promise<void> {
     const activePlayers = players.filter((p) => p.status !== 'spectator');
     const activeIds = activePlayers.map((p) => p.id);
 
     const { pairs, impostorIds, soloPlayerId } = assignRoles(activeIds);
-    const { pairWord, outsiderWord, theme } = pickWords();
+    const { pairWord, outsiderWord, theme } = pickWords(themeGroup);
     const firstTurn = activeIds[0];
 
     const game: DuoChaosGame = {

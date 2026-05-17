@@ -54,11 +54,11 @@ export interface ImpostorCallbacks {
 }
 
 export const impostorService = {
-  async startGame(roomId: string, players: Player[], callbacks: ImpostorCallbacks): Promise<void> {
+  async startGame(roomId: string, players: Player[], callbacks: ImpostorCallbacks, themeGroup?: string): Promise<void> {
     const activePlayers = players.filter((p) => p.status !== 'spectator');
     const activeIds = activePlayers.map((p) => p.id);
 
-    const { word, theme } = pickWord();
+    const { word, theme } = pickWord(themeGroup);
     const impostorCount = activeIds.length <= 4 ? 1 : activeIds.length <= 6 ? 1 : 2;
     const impostorIds = assignImpostors(activeIds, impostorCount);
 
