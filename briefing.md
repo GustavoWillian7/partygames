@@ -1,7 +1,7 @@
 # PartyGames — Bíblia do Projeto
 
 > Documento vivo. Atualizar a cada decisão arquitetural, mudança de stack ou novo jogo.
-> Versão: 1.2.0 — 2026-05-17
+> Versão: 1.5.0 — 2026-05-17
 
 ---
 
@@ -557,35 +557,66 @@ duo-chaos:game-over (winnerIds, reason)
 
 ## 9. UX/UI — Diretrizes de Implementação
 
-### 9.1 Paleta de Cores (Tailwind)
+### 9.1 Paleta de Cores e Tipografia
+
+**Cores** (atualizadas no `tailwind.config.js`):
 
 ```javascript
-// tailwind.config.js (extend colors)
 colors: {
-  background: '#0f172a',        // slate-900
-  surface:    '#1e293b',        // slate-800
-  primary:    '#8b5cf6',        // violet-500
-  accent:     '#a3e635',        // lime-400
-  info:       '#22d3ee',        // cyan-400
-  danger:     '#ef4444',        // red-500
-  success:    '#22c55e',        // green-500
-  text:       '#f8fafc',        // slate-50
-  muted:      '#94a3b8',        // slate-400
+  background:   '#0B0D17',    // Quase preto azulado — base sólida
+  surface:      '#13162B',    // Painéis e cards
+  'surface-hover': '#1A1E3A', // Hover em cards
+  primary:      '#7C3AED',    // Roxo violeta maduro
+  'primary-light': '#A78BFA', // Roxo claro para gradientes
+  accent:       '#22D3EE',    // Cyan — pontos focais
+  'accent-alt': '#A3E635',    // Lime — status online, indicadores
+  danger:       '#EF4444',    // Vermelho — erros, eliminação
+  success:      '#22C55E',    // Verde — sucesso
+  warning:      '#FACC15',    // Amarelo — alertas, pendente
+  text:         '#F1F5F9',    // Texto principal (slate quase branco)
+  muted:        '#94A3B8',    // Texto secundário
 }
 ```
 
-### 9.2 Componentes de Feedback Obrigatórios
+**Texturas**:
+- **Noise/Grain**: overlay fixo com SVG `feTurbulence` a 2.5% opacity (`noise-overlay`)
+- **Grid pattern**: linhas sutis em roxo a 3% opacity (`bg-grid`)
+- **Orbs**: gradientes radiais blur(100px) com opacity 0.1 nos cantos (sem partículas flutuantes)
 
-| Situação | Componente | Biblioteca |
-|----------|-----------|------------|
-| Notificações gerais | Toast | `sonner` ou `react-hot-toast` |
-| Carregamento inicial | Skeleton | Tailwind `animate-pulse` |
-| Transição de telas | Animação de entrada/saída | Framer Motion (`AnimatePresence`) |
-| Revelação do impostor | Animação dramática | Framer Motion (scale + opacity) |
-| Timer de rodada | Contador regressivo visual | CSS + `useCountdown` hook |
-| Voto confirmado | Micro-interação (shake/check) | Framer Motion |
+**Tipografia** (Google Fonts):
+- **Títulos/Logo**: `Space Grotesk` — geométrica, moderna, com personalidade
+- **UI/Body**: `Inter` — legibilidade máxima
+- **Monospace (códigos de sala)**: `JetBrains Mono`
 
-### 9.3 Layout Responsivo
+### 9.2 Componentes UI Refinados
+
+| Componente | Arquivo | Características |
+|------------|---------|-----------------|
+| **GlassCard** | `ui/GlassCard.tsx` | `rounded-xl` (reduzido de `rounded-2xl`), prop `sharp` para bordas ainda mais afiadas. Variantes: default, accent, danger, success. Hover opcional com `card-lift` |
+| **NeonButton** | `ui/NeonButton.tsx` | Efeito de **preenchimento (fill)** no hover via `::before` — sobe de baixo. Borda sólida 1px com cor do variant a 40% opacity. `rounded-lg`. Variantes: primary, accent, danger, ghost |
+| **AvatarOrb** | `ui/AvatarOrb.tsx` | Borda de 2px com gradiente linear (`#7C3AED` → `#22D3EE`) via div absoluta. Fundo escuro sólido. Status dot: online=lime, disconnected=vermelho, spectator=amarelo, eliminated=cinza |
+| **GameCard** | `ui/GameCard.tsx` | `rounded-xl`, borda 1px `rgba(255,255,255,0.08)`, linha gradiente sutil no topo. Hover: `scale(1.02)` + `y(-2)` |
+| **Badge** | `ui/Badge.tsx` | Mantido, cores alinhadas com nova paleta |
+| **GlowInput** | `ui/GlowInput.tsx` | Borda sólida cinza escuro, focus com borda roxa + glow mínimo (`input-glow`) |
+
+### 9.3 Layouts das Telas Principais
+
+**AuthPage** — Split-Screen:
+- **Esquerda (~50%)**: Branding — logo "PartyGames" em `Space Grotesk` com `text-gradient` (roxo → cyan), tagline, stack de emojis, bullets de features com dots coloridos, orbs decorativos sutis
+- **Direita (~50%)**: Formulário em `glass-strong rounded-xl`, tabs (login/register/guest), botão com `btn-fill-primary`
+- **Mobile**: empilha verticalmente
+
+**HomePage** — Layout Assimétrico:
+- **Header**: Logo + saudação "Olá, {nome}" + logout minimalista
+- **Grid**: `lg:grid-cols-5` — Criar Sala (`col-span-3`) + Entrar Sala (`col-span-2`)
+- Cards com ícone em círculo colorido (`bg-primary/10 border-primary/20`)
+
+**RoomPage** — Barra Lateral + Centro Livre:
+- **Sidebar fixa** (~260px): nome da sala, código com badge `font-mono`, status, lista vertical de jogadores (`AvatarOrb`), botão "Sair"
+- **Área central**: configurações (host only, collapsible), seleção de jogo com `GameCard` grid, estados de espera/jogando
+- **Mobile**: header com hamburger, sidebar vira drawer com overlay
+
+### 9.4 Layout Responsivo
 - **Mobile-first**: o jogo deve ser jogável em celular (telas de 320px+).
 - **Botões mínimos**: 48px de altura para touch.
 - **Área de jogo centralizada**: evitar poluição visual durante a partida.
