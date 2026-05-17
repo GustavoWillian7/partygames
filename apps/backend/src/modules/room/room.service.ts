@@ -88,6 +88,7 @@ export const roomService = {
     settings: Partial<RoomSettings>,
     hostPlayer: Player
   ): Promise<Room> {
+    console.log('[roomService.createRoom] generating code, redis status=', redis.status);
     let code = generateRoomCode();
     let attempts = 0;
     while (await roomExists(code)) {
@@ -95,6 +96,7 @@ export const roomService = {
       attempts++;
       if (attempts > 50) throw new Error('Failed to generate unique room code');
     }
+    console.log('[roomService.createRoom] code generated', code);
 
     const now = new Date();
     const room: Room = {
@@ -114,7 +116,9 @@ export const roomService = {
     };
 
     await saveRoom(room);
+    console.log('[roomService.createRoom] room saved to redis');
     await redis.set(`playerRoom:${hostPlayer.id}`, room.id);
+    console.log('[roomService.createRoom] playerRoom mapping saved');
     return room;
   },
 

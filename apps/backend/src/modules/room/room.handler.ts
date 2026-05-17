@@ -14,7 +14,9 @@ import { duoChaosService } from '../duo-chaos/duo-chaos.service';
 import type { Player } from '@partygames/shared';
 
 async function buildPlayer(socketId: string, playerId: string): Promise<Player> {
+  console.log('[buildPlayer] fetching profile for', playerId);
   const profile = await authService.getById(playerId);
+  console.log('[buildPlayer] profile found?', !!profile);
   return {
     id: playerId,
     socketId,
@@ -100,14 +102,20 @@ export function roomHandler(io: SocketServer, socket: Socket) {
   }
 
   socket.on('room:create', async (payload) => {
+    console.log('[room:create] received from playerId=', playerId, 'payload=', payload);
     try {
       const data = validatePayload(createRoomSchema, payload);
+      console.log('[room:create] payload validated');
       const player = await buildPlayer(socket.id, playerId);
+      console.log('[room:create] player built', player.id);
       const room = await roomService.createRoom(data.name, data.settings ?? {}, player);
+      console.log('[room:create] room created', room.id);
       socket.join(room.id);
       socket.emit('room:state', room);
     } catch (err) {
-      socket.emit('room:error', { message: err instanceof Error ? err.message : 'Failed to create room' });
+      const msg = err instanceof Error ? err.message : 'Failed to create room';
+      console.error('[room:create] error:', msg);
+      socket.emit('room:error', { message: msg });
     }
   });
 
