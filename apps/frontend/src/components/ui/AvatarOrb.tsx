@@ -7,6 +7,7 @@ interface AvatarOrbProps {
   status?: 'online' | 'disconnected' | 'spectator' | 'eliminated';
   size?: 'sm' | 'md' | 'lg';
   className?: string;
+  showLabel?: boolean;
 }
 
 const sizeClasses = {
@@ -29,6 +30,7 @@ export default function AvatarOrb({
   status = 'online',
   size = 'md',
   className = '',
+  showLabel = true,
 }: AvatarOrbProps) {
   const initials = name
     .split(' ')
@@ -75,16 +77,18 @@ export default function AvatarOrb({
         />
       </div>
 
-      <div className="flex items-center gap-1 min-w-0 max-w-full">
-        <span className={`text-xs truncate max-w-[80px] ${isYou ? 'text-primary font-medium' : 'text-muted'}`}>
-          {isYou ? 'Você' : name}
-        </span>
-        {isHost && (
-          <span className="text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full border border-primary/30 shrink-0">
-            Host
+      {showLabel && (
+        <div className="flex items-center gap-1 min-w-0 max-w-full">
+          <span className={`text-xs truncate max-w-[80px] ${isYou ? 'text-primary font-medium' : 'text-muted'}`}>
+            {isYou ? 'Você' : name}
           </span>
-        )}
-      </div>
+          {isHost && (
+            <span className="text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full border border-primary/30 shrink-0">
+              Host
+            </span>
+          )}
+        </div>
+      )}
     </motion.div>
   );
 }

@@ -223,18 +223,36 @@ export default function RoomPage() {
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -10 }}
-                      className="flex items-center justify-between group min-w-0"
+                      className="flex items-center gap-3 group min-w-0"
                     >
-                      <div className="min-w-0 flex-1">
-                        <AvatarOrb
-                          name={p.name}
-                          isHost={p.isHost}
-                          isYou={p.id === player?.id}
-                          status={p.status === 'disconnected' ? 'disconnected' : p.status === 'spectator' ? 'spectator' : 'online'}
-                          size="sm"
-                        />
+                      {/* Avatar — sempre mesmo tamanho */}
+                      <AvatarOrb
+                        name={p.name}
+                        isHost={false}
+                        isYou={p.id === player?.id}
+                        status={p.status === 'disconnected' ? 'disconnected' : p.status === 'spectator' ? 'spectator' : 'online'}
+                        size="sm"
+                        showLabel={false}
+                      />
+
+                      {/* Nome + tag + status — alinhado na mesma reta */}
+                      <div className="flex-1 min-w-0 flex items-center gap-2">
+                        <span className={`text-sm truncate ${p.id === player?.id ? 'text-primary font-medium' : 'text-text'}`}>
+                          {p.id === player?.id ? 'Você' : p.name}
+                        </span>
+
+                        {p.isHost && (
+                          <span className="text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full border border-primary/30 shrink-0">
+                            Host
+                          </span>
+                        )}
+
+                        {p.status === 'disconnected' && (
+                          <span className="text-[10px] text-muted shrink-0">Offline</span>
+                        )}
                       </div>
 
+                      {/* Botão remover — aparece no hover */}
                       {isHost && p.id !== player?.id && currentRoom.status === 'waiting' && (
                         <button
                           onClick={() => handleKick(p.id)}
