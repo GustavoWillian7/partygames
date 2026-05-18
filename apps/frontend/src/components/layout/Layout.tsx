@@ -1,5 +1,6 @@
 import { type ReactNode } from 'react';
 import { motion } from 'framer-motion';
+import SocketStatus from '../ui/SocketStatus';
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
@@ -7,6 +8,9 @@ export default function Layout({ children }: { children: ReactNode }) {
       {/* Subtle gradient orbs */}
       <div className="orb orb-1" />
       <div className="orb orb-2" />
+
+      {/* Connection status */}
+      <SocketStatus />
 
       {/* Content */}
       <motion.div

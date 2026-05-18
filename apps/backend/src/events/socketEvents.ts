@@ -45,7 +45,7 @@ export function registerSocketEvents(io: SocketServer) {
     duoChaosHandler(io, socket);
 
     socket.on('disconnect', () => {
-      unregisterSocket(playerId);
+      unregisterSocket(playerId, socket);
     });
   });
 }

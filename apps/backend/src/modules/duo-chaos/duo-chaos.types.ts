@@ -14,4 +14,5 @@ export interface DuoChaosGame {
   markedPair: Record<string, string>; // playerId -> targetId
   chatHistory: ChatMessage[];
   turnTimerEndsAt?: number;
+  nextActionAt?: number; // timestamp para próxima ação automática (endTurn/finishGame)
 }

@@ -8,6 +8,10 @@ import { redis } from './config/redis';
 import { errorHandler } from './middleware/errorHandler';
 import authRoutes from './modules/auth/auth.routes';
 import { registerSocketEvents } from './events/socketEvents';
+import { recoverImpostorGames } from './modules/impostor/impostor.service';
+import { recoverDuoChaosGames } from './modules/duo-chaos/duo-chaos.service';
+import { roomService } from './modules/room/room.service';
+import { getAllSockets } from './socketRegistry';
 
 async function main() {
   await connectMongo();
@@ -26,7 +30,43 @@ async function main() {
     cors: { origin: env.CORS_ORIGIN },
   });
 
+  function buildImpostorCallbacks(roomId: string) {
+    return {
+      emitToRoom: (event: string, payload: unknown) => {
+        io.to(roomId).emit(event, payload);
+      },
+      emitToPlayer: (playerId: string, event: string, payload: unknown) => {
+        for (const s of getAllSockets(playerId)) {
+          s.emit(event, payload);
+        }
+      },
+      getRoomPlayers: async (_roomId: string) => {
+        const room = await roomService.getRoom(_roomId);
+        return room?.players ?? [];
+      },
+      onGameFinished: async (_roomId: string) => {
+        const room = await roomService.getRoom(_roomId);
+        if (room) {
+          room.status = 'waiting';
+          room.currentGame = undefined;
+          room.updatedAt = new Date();
+          await roomService.updateRoom(room);
+          io.to(_roomId).emit('room:state', room);
+        }
+      },
+    };
+  }
+
   registerSocketEvents(io);
+
+  // Recovery de timers após reinício do servidor
+  try {
+    await recoverImpostorGames(buildImpostorCallbacks);
+    await recoverDuoChaosGames(buildImpostorCallbacks);
+    console.log('[Server] Game timers recovered.');
+  } catch (err) {
+    console.error('[Server] Failed to recover game timers:', err);
+  }
 
   httpServer.listen(env.PORT, () => {
     console.log(`[Server] Running on http://localhost:${env.PORT}`);

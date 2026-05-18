@@ -5,6 +5,7 @@ interface RoomState {
   currentRoom: Room | null;
   isLoading: boolean;
   error: string | null;
+  activityLog: string[];
   setRoom: (room: Room | null) => void;
   updateRoom: (room: Room) => void;
   playerJoined: (player: Player) => void;
@@ -13,12 +14,15 @@ interface RoomState {
   clearRoom: () => void;
   setError: (error: string | null) => void;
   setLoading: (loading: boolean) => void;
+  addLog: (msg: string) => void;
+  clearLogs: () => void;
 }
 
 export const useRoomStore = create<RoomState>((set) => ({
   currentRoom: null,
   isLoading: false,
   error: null,
+  activityLog: [],
   setRoom: (room) => set({ currentRoom: room, error: null }),
   updateRoom: (room) => set({ currentRoom: room }),
   playerJoined: (player) =>
@@ -58,7 +62,12 @@ export const useRoomStore = create<RoomState>((set) => ({
         },
       };
     }),
-  clearRoom: () => set({ currentRoom: null, error: null }),
+  clearRoom: () => set({ currentRoom: null, error: null, activityLog: [] }),
   setError: (error) => set({ error }),
   setLoading: (isLoading) => set({ isLoading }),
+  addLog: (msg) =>
+    set((state) => ({
+      activityLog: [...state.activityLog.slice(-19), msg],
+    })),
+  clearLogs: () => set({ activityLog: [] }),
 }));

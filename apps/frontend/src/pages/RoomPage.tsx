@@ -3,7 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/useAuthStore';
 import { useRoomStore } from '../store/useRoomStore';
-import { getSocket } from '../socket/socketManager';
+import { getSocket, leaveRoomAndWait } from '../socket/socketManager';
 import GlassCard from '../components/ui/GlassCard';
 import NeonButton from '../components/ui/NeonButton';
 import GlowInput from '../components/ui/GlowInput';
@@ -33,7 +33,7 @@ export default function RoomPage() {
   const { roomId } = useParams<{ roomId: string }>();
   const navigate = useNavigate();
   const { player, token } = useAuthStore();
-  const { currentRoom, setRoom, playerJoined, playerLeft, playerReconnected, clearRoom } = useRoomStore();
+  const { currentRoom, setRoom, playerJoined, playerLeft, playerReconnected, clearRoom, activityLog, addLog } = useRoomStore();
   const [error, setError] = useState('');
   const [showSettings, setShowSettings] = useState(false);
   const [settingsForm, setSettingsForm] = useState<Partial<RoomSettings>>({});
@@ -53,11 +53,22 @@ export default function RoomPage() {
       setRoom(room);
       setSettingsForm(room.settings);
     });
-    socket.on('room:player-joined', ({ player: p }) => playerJoined(p));
-    socket.on('room:player-left', ({ playerId, newHostId }) => playerLeft(playerId, newHostId));
-    socket.on('room:player-reconnected', ({ player: p }) => playerReconnected(p));
+    socket.on('room:player-joined', ({ player: p }) => {
+      playerJoined(p);
+      addLog(`➡️ ${p.name} entrou na sala`);
+    });
+    socket.on('room:player-left', ({ playerId, newHostId }) => {
+      const leavingPlayer = currentRoom?.players.find((p) => p.id === playerId);
+      playerLeft(playerId, newHostId);
+      if (leavingPlayer) addLog(`⬅️ ${leavingPlayer.name} saiu da sala`);
+    });
+    socket.on('room:player-reconnected', ({ player: p }) => {
+      playerReconnected(p);
+      addLog(`🔄 ${p.name} reconectou`);
+    });
     socket.on('room:error', ({ message }) => setError(message));
     socket.on('room:game-started', ({ gameType }) => {
+      addLog(`🎮 Jogo iniciado: ${gameType === 'impostor' ? 'Jogo do Impostor' : 'Encontre sua Dupla'}`);
       navigate(`/game/${gameType}`);
     });
 
@@ -73,11 +84,10 @@ export default function RoomPage() {
       socket.off('room:error');
       socket.off('room:game-started');
     };
-  }, [token, navigate, roomId, currentRoom, setRoom, playerJoined, playerLeft, playerReconnected]);
+  }, [token, navigate, roomId, currentRoom, setRoom, playerJoined, playerLeft, playerReconnected, addLog]);
 
-  const handleLeave = () => {
-    const socket = getSocket();
-    socket.emit('room:leave');
+  const handleLeave = async () => {
+    await leaveRoomAndWait();
     clearRoom();
     navigate('/');
   };
@@ -100,15 +110,31 @@ export default function RoomPage() {
 
   if (!currentRoom) {
     return (
-      <div className="min-h-screen flex items-center justify-center bg-background">
+      <div className="min-h-screen flex items-center justify-center bg-background relative">
         <motion.div
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          className="text-center"
+          initial={{ opacity: 0, scale: 0.9 }}
+          animate={{ opacity: 1, scale: 1 }}
+          transition={{ duration: 0.5 }}
+          className="text-center px-6"
         >
-          <div className="w-14 h-14 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-5" />
-          <p className="text-muted text-lg">Entrando na sala...</p>
-          {error && <p className="text-danger mt-4">{error}</p>}
+          <motion.div
+            animate={{ rotate: 360 }}
+            transition={{ repeat: Infinity, duration: 1.2, ease: 'linear' }}
+            className="w-16 h-16 border-[3px] border-primary/20 border-t-primary rounded-full mx-auto mb-6"
+          />
+          <h2 className="font-display text-2xl font-bold text-text mb-2">Entrando na sala...</h2>
+          <p className="text-muted text-sm max-w-xs mx-auto">
+            Estamos conectando você. Aguarde um momento.
+          </p>
+          {error && (
+            <motion.p
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="text-danger text-sm mt-6 bg-danger/10 rounded-xl px-4 py-3 border border-danger/20 inline-block"
+            >
+              {error}
+            </motion.p>
+          )}
         </motion.div>
       </div>
     );
@@ -201,6 +227,18 @@ export default function RoomPage() {
                 </AnimatePresence>
               </div>
             </div>
+
+            {/* Activity Log */}
+            {activityLog.length > 0 && (
+              <div className="p-4 border-t border-white/[0.06] max-h-40 overflow-y-auto custom-scrollbar">
+                <p className="text-[10px] text-muted uppercase tracking-wider font-medium mb-2">Atividade recente</p>
+                <div className="space-y-1">
+                  {activityLog.slice(-5).map((log, idx) => (
+                    <p key={idx} className="text-[11px] text-muted/80 leading-tight">{log}</p>
+                  ))}
+                </div>
+              </div>
+            )}
 
             {/* Sidebar Footer */}
             <div className="p-4 border-t border-white/[0.06]">
@@ -353,9 +391,29 @@ export default function RoomPage() {
           {/* Playing state */}
           {currentRoom.status === 'playing' && (
             <GlassCard variant="accent" className="text-center py-10" hover={false}>
-              <div className="w-12 h-12 border-3 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-4" />
-              <h3 className="font-display text-xl font-bold text-accent mb-2">Jogo em andamento!</h3>
-              <p className="text-muted">Aguarde o próximo jogo...</p>
+              <motion.div
+                animate={{ rotate: 360 }}
+                transition={{ repeat: Infinity, duration: 1.5, ease: 'linear' }}
+                className="w-14 h-14 border-[3px] border-accent/20 border-t-accent rounded-full mx-auto mb-5"
+              />
+              <h3 className="font-display text-2xl font-bold text-accent mb-2">Jogo em andamento!</h3>
+              <p className="text-muted max-w-sm mx-auto mb-6">
+                A partida já começou. Você pode assistir e aguardar a próxima rodada.
+              </p>
+              <div className="flex flex-wrap justify-center gap-2">
+                {currentRoom.players.filter((p) => p.status !== 'spectator').map((p) => (
+                  <motion.span
+                    key={p.id}
+                    initial={{ opacity: 0, scale: 0.8 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    transition={{ delay: 0.05 * currentRoom.players.indexOf(p) }}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-accent/10 border border-accent/20 text-accent text-xs font-medium"
+                  >
+                    <span className="w-1.5 h-1.5 rounded-full bg-accent animate-pulse" />
+                    {p.name}
+                  </motion.span>
+                ))}
+              </div>
             </GlassCard>
           )}
 

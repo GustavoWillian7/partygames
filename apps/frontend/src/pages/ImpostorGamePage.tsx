@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useImpostorGame } from '../hooks/useImpostorGame';
 import { useAuthStore } from '../store/useAuthStore';
 import { useRoomStore } from '../store/useRoomStore';
-import { getSocket } from '../socket/socketManager';
+import { leaveRoomAndWait } from '../socket/socketManager';
 import GlassCard from '../components/ui/GlassCard';
 import NeonButton from '../components/ui/NeonButton';
 import GlowInput from '../components/ui/GlowInput';
@@ -40,9 +40,8 @@ export default function ImpostorGamePage() {
     setHasVoted(true);
   };
 
-  const handleLeave = () => {
-    const socket = getSocket();
-    socket.emit('room:leave');
+  const handleLeave = async () => {
+    await leaveRoomAndWait();
     clearRoom();
     navigate('/');
   };

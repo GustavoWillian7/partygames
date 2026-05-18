@@ -31,6 +31,14 @@ function scheduleTimer(roomId: string, ms: number, cb: () => void): void {
   gameTimers.set(roomId, setTimeout(cb, ms));
 }
 
+async function setNextAction(roomId: string, ms: number): Promise<void> {
+  const game = await getGame(roomId);
+  if (game) {
+    game.nextActionAt = Date.now() + ms;
+    await saveGame(game);
+  }
+}
+
 async function getGame(roomId: string): Promise<ImpostorGame | null> {
   const data = await redis.get(`game:${roomId}`);
   if (!data) return null;
@@ -51,6 +59,38 @@ export interface ImpostorCallbacks {
   emitToPlayer: (playerId: string, event: string, payload: unknown) => void;
   getRoomPlayers: (roomId: string) => Promise<Player[]>;
   onGameFinished?: (roomId: string) => Promise<void>;
+}
+
+export async function recoverImpostorGames(callbacksFactory: (roomId: string) => ImpostorCallbacks): Promise<void> {
+  const keys = await redis.keys('game:*');
+  for (const key of keys) {
+    const data = await redis.get(key);
+    if (!data) continue;
+    const game = JSON.parse(data) as ImpostorGame;
+    if (game.status === 'finished') continue;
+    if (!game.nextActionAt) continue;
+
+    const remaining = game.nextActionAt - Date.now();
+    if (remaining <= 0) {
+      // Timer já expirou — executar imediatamente
+      const callbacks = callbacksFactory(game.roomId);
+      if (game.status === 'playing') {
+        await impostorService.endRoundClues(game.roomId, callbacks);
+      } else if (game.status === 'voting') {
+        await impostorService.endVoting(game.roomId, callbacks);
+      }
+    } else {
+      // Reagendar timer
+      scheduleTimer(game.roomId, remaining, () => {
+        const callbacks = callbacksFactory(game.roomId);
+        if (game.status === 'playing') {
+          impostorService.endRoundClues(game.roomId, callbacks);
+        } else if (game.status === 'voting') {
+          impostorService.endVoting(game.roomId, callbacks);
+        }
+      });
+    }
+  }
 }
 
 export const impostorService = {
@@ -110,6 +150,7 @@ export const impostorService = {
     scheduleTimer(roomId, ROUND_TIME_MS, () => {
       this.endRoundClues(roomId, callbacks);
     });
+    await setNextAction(roomId, ROUND_TIME_MS);
   },
 
   async sendClue(roomId: string, playerId: string, word: string, callbacks: ImpostorCallbacks): Promise<void> {
@@ -153,6 +194,7 @@ export const impostorService = {
     scheduleTimer(roomId, VOTING_TIME_MS, () => {
       this.endVoting(roomId, callbacks);
     });
+    await setNextAction(roomId, VOTING_TIME_MS);
   },
 
   async submitVote(roomId: string, voterId: string, votedId: string | null, callbacks: ImpostorCallbacks): Promise<void> {
@@ -208,10 +250,12 @@ export const impostorService = {
       scheduleTimer(roomId, REVEAL_TIME_MS, () => {
         this.finishGame(roomId, result.winnerIds, result.reason, callbacks);
       });
+      await setNextAction(roomId, REVEAL_TIME_MS);
     } else {
       scheduleTimer(roomId, REVEAL_TIME_MS, () => {
         this.nextRound(roomId, callbacks);
       });
+      await setNextAction(roomId, REVEAL_TIME_MS);
     }
   },
 
@@ -259,6 +303,7 @@ export const impostorService = {
     scheduleTimer(roomId, ROUND_TIME_MS, () => {
       this.endRoundClues(roomId, callbacks);
     });
+    await setNextAction(roomId, ROUND_TIME_MS);
   },
 
   async finishGame(roomId: string, winnerIds: string[], reason: string, callbacks: ImpostorCallbacks): Promise<void> {

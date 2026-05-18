@@ -33,6 +33,7 @@ export interface ServerEvents {
   'room:player-reconnected': (payload: { player: Player }) => void;
   'room:error': (payload: { message: string }) => void;
   'room:game-started': (payload: { gameType: GameType; initialState: GameState }) => void;
+  'room:left': (payload: { success: boolean; message?: string }) => void;
 
   'impostor:round-start': (payload: {
     round: number;

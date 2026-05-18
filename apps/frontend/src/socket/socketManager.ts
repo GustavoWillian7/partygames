@@ -44,3 +44,24 @@ export function disconnectSocket(): void {
     socket = null;
   }
 }
+
+export function leaveRoomAndWait(): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const s = getSocket();
+    const onLeft = (payload: { success: boolean; message?: string }) => {
+      s.off('room:left', onLeft);
+      if (payload.success) {
+        resolve();
+      } else {
+        reject(new Error(payload.message || 'Falha ao sair da sala'));
+      }
+    };
+    s.once('room:left', onLeft);
+    s.emit('room:leave');
+    // Timeout de segurança
+    setTimeout(() => {
+      s.off('room:left', onLeft);
+      resolve();
+    }, 3000);
+  });
+}

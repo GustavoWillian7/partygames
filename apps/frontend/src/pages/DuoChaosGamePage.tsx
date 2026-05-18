@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useDuoChaosGame } from '../hooks/useDuoChaosGame';
 import { useRoomStore } from '../store/useRoomStore';
-import { getSocket } from '../socket/socketManager';
+import { leaveRoomAndWait } from '../socket/socketManager';
 import GlassCard from '../components/ui/GlassCard';
 import NeonButton from '../components/ui/NeonButton';
 import GlowInput from '../components/ui/GlowInput';
@@ -23,9 +23,8 @@ export default function DuoChaosGamePage() {
     setWordInput('');
   };
 
-  const handleLeave = () => {
-    const socket = getSocket();
-    socket.emit('room:leave');
+  const handleLeave = async () => {
+    await leaveRoomAndWait();
     clearRoom();
     navigate('/');
   };
@@ -81,20 +80,42 @@ export default function DuoChaosGamePage() {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-4"
             >
-              {/* Secret Word */}
-              <GlassCard variant="accent" className="text-center">
-                <p className="text-muted text-sm mb-2">Sua palavra:</p>
-                <motion.p
-                  initial={{ scale: 0.5 }}
-                  animate={{ scale: 1 }}
-                  className="text-3xl font-black text-accent neon-text-cyan"
-                >
-                  {state.yourWord ?? '???'}
-                </motion.p>
-                <p className="text-muted text-xs mt-2">Tema: {state.yourTheme ?? '???'}</p>
-                <p className="text-primary text-xs mt-3 bg-primary/10 rounded-lg p-2">
-                  Dê uma dica relacionada, mas não fale a palavra!
-                </p>
+              {/* Secret Word / Impostor Card */}
+              <GlassCard variant={state.isImpostor ? 'danger' : 'accent'} className="text-center">
+                {state.isImpostor ? (
+                  <>
+                    <motion.div
+                      initial={{ scale: 0 }}
+                      animate={{ scale: 1 }}
+                      transition={{ type: 'spring' }}
+                      className="text-5xl mb-3"
+                    >
+                      🎭
+                    </motion.div>
+                    <p className="text-danger text-lg font-bold mb-2">Você é o impostor!</p>
+                    <p className="text-muted text-sm mb-3">Você não tem palavra secreta.</p>
+                    <p className="text-muted text-sm">Tema:</p>
+                    <p className="text-2xl font-bold text-accent mt-1">{state.yourTheme ?? '???'}</p>
+                    <p className="text-primary text-xs mt-3 bg-primary/10 rounded-lg p-2">
+                      Tente fazer dupla com alguém que tenha a palavra secreta!
+                    </p>
+                  </>
+                ) : (
+                  <>
+                    <p className="text-muted text-sm mb-2">Sua palavra:</p>
+                    <motion.p
+                      initial={{ scale: 0.5 }}
+                      animate={{ scale: 1 }}
+                      className="text-3xl font-black text-accent neon-text-cyan"
+                    >
+                      {state.yourWord ?? '???'}
+                    </motion.p>
+                    <p className="text-muted text-xs mt-2">Tema: {state.yourTheme ?? '???'}</p>
+                    <p className="text-primary text-xs mt-3 bg-primary/10 rounded-lg p-2">
+                      Dê uma dica relacionada, mas não fale a palavra!
+                    </p>
+                  </>
+                )}
               </GlassCard>
 
               {/* Turn Indicator */}

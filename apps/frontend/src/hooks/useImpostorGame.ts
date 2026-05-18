@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { getSocket } from '../socket/socketManager';
 import { useAuthStore } from '../store/useAuthStore';
+import { useRoomStore } from '../store/useRoomStore';
 
 export type GamePhase = 'setup' | 'playing' | 'voting' | 'reveal' | 'finished';
 
@@ -108,9 +109,11 @@ export function useImpostorGame() {
         ...prev,
         phase: 'playing',
         currentRound: payload.round,
-        yourWord: payload.yourWord,
-        yourTheme: payload.yourTheme,
-        isImpostor: payload.isImpostor,
+        // O backend emite round-start duas vezes: individual (com seus dados)
+        // e broadcast público (sem seus dados). Só sobrescrever se vier no payload.
+        yourWord: payload.yourWord ?? prev.yourWord,
+        yourTheme: payload.yourTheme ?? prev.yourTheme,
+        isImpostor: payload.isImpostor ?? prev.isImpostor,
         clues: {},
         votes: {},
         eliminatedThisRound: undefined,
@@ -166,6 +169,7 @@ export function useImpostorGame() {
         winnerIds: payload.winnerIds,
         reason: payload.reason,
       }));
+      useRoomStore.getState().addLog(`🏁 Jogo do Impostor terminou: ${payload.reason}`);
     };
 
     const onError = (payload: { code: string; message: string }) => {
@@ -175,7 +179,12 @@ export function useImpostorGame() {
       }
     };
 
+    const onRoomState = (room: { id: string; players: { id: string; name: string }[]; status: string }) => {
+      useRoomStore.getState().setRoom(room as import('@partygames/shared').Room);
+    };
+
     socket.on('room:game-started', onGameStarted);
+    socket.on('room:state', onRoomState);
     socket.on('impostor:state', onState);
     socket.on('impostor:round-start', onRoundStart);
     socket.on('impostor:clue-received', onClueReceived);
@@ -190,6 +199,7 @@ export function useImpostorGame() {
 
     return () => {
       socket.off('room:game-started', onGameStarted);
+      socket.off('room:state', onRoomState);
       socket.off('impostor:state', onState);
       socket.off('impostor:round-start', onRoundStart);
       socket.off('impostor:clue-received', onClueReceived);
@@ -205,20 +215,14 @@ export function useImpostorGame() {
   const sendClue = useCallback((word: string) => {
     const socket = getSocket();
     socket.emit('impostor:send-clue', { word });
-    setState((prev) => ({
-      ...prev,
-      clues: { ...prev.clues, [player?.id ?? '']: word },
-    }));
-  }, [player?.id]);
+    // Não atualizar estado otimisticamente — aguardar confirmação do backend via 'impostor:clue-received'
+  }, []);
 
   const submitVote = useCallback((votedPlayerId: string | null) => {
     const socket = getSocket();
     socket.emit('impostor:vote', { votedPlayerId });
-    setState((prev) => ({
-      ...prev,
-      votes: { ...prev.votes, [player?.id ?? '']: votedPlayerId },
-    }));
-  }, [player?.id]);
+    // Não atualizar estado otimisticamente — aguardar confirmação do backend via 'impostor:vote-received'
+  }, []);
 
   const isWinner = player?.id ? state.winnerIds?.includes(player.id) : false;
 

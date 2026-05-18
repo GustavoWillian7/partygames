@@ -1,4 +1,5 @@
 import { redis } from '../../config/redis';
+import { hasActiveSocket } from '../../socketRegistry';
 import { Room, Player, RoomSettings } from '@partygames/shared';
 
 const RECONNECT_WINDOW_MS = 60_000;
@@ -236,6 +237,11 @@ export const roomService = {
   },
 
   async handleDisconnect(playerId: string, socketId: string): Promise<{ room: Room | null; player: Player | undefined }> {
+    // Se o jogador ainda tem outras abas ativas, não marcar como desconectado
+    if (hasActiveSocket(playerId)) {
+      return { room: null, player: undefined };
+    }
+
     const roomId = await redis.get(`playerRoom:${playerId}`);
     if (!roomId) return { room: null, player: undefined };
 
@@ -256,6 +262,8 @@ export const roomService = {
       clearReconnectTimer(playerId);
       const timer = setTimeout(async () => {
         reconnectTimers.delete(playerId);
+        // Verificar novamente — o jogador pode ter reconectado durante a janela
+        if (hasActiveSocket(playerId)) return;
         const { room: currentRoom, newHostId } = await this.leaveRoom(playerId);
         // Note: leaveRoom already handles host transfer and room deletion
       }, RECONNECT_WINDOW_MS);

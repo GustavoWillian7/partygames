@@ -30,6 +30,14 @@ function scheduleTimer(roomId: string, ms: number, cb: () => void): void {
   gameTimers.set(roomId, setTimeout(cb, ms));
 }
 
+async function setNextAction(roomId: string, ms: number): Promise<void> {
+  const game = await getGame(roomId);
+  if (game) {
+    game.nextActionAt = Date.now() + ms;
+    await saveGame(game);
+  }
+}
+
 async function getGame(roomId: string): Promise<DuoChaosGame | null> {
   const data = await redis.get(`game:${roomId}`);
   if (!data) return null;
@@ -50,6 +58,28 @@ export interface DuoChaosCallbacks {
   emitToPlayer: (playerId: string, event: string, payload: unknown) => void;
   getRoomPlayers: (roomId: string) => Promise<Player[]>;
   onGameFinished?: (roomId: string) => Promise<void>;
+}
+
+export async function recoverDuoChaosGames(callbacksFactory: (roomId: string) => DuoChaosCallbacks): Promise<void> {
+  const keys = await redis.keys('game:*');
+  for (const key of keys) {
+    const data = await redis.get(key);
+    if (!data) continue;
+    const game = JSON.parse(data) as DuoChaosGame;
+    if (game.status === 'finished') continue;
+    if (!game.nextActionAt) continue;
+
+    const remaining = game.nextActionAt - Date.now();
+    if (remaining <= 0) {
+      const callbacks = callbacksFactory(game.roomId);
+      await duoChaosService.endTurn(game.roomId, callbacks);
+    } else {
+      scheduleTimer(game.roomId, remaining, () => {
+        const callbacks = callbacksFactory(game.roomId);
+        duoChaosService.endTurn(game.roomId, callbacks);
+      });
+    }
+  }
 }
 
 export const duoChaosService = {
@@ -82,12 +112,13 @@ export const duoChaosService = {
 
     // Enviar palavra individual para cada jogador
     for (const p of activePlayers) {
-      const playerWord = getPlayerWord(p.id, pairs, impostorIds, playerWords);
+      const playerWord = getPlayerWord(p.id, impostorIds, playerWords);
       callbacks.emitToPlayer(p.id, 'duo-chaos:turn-start', {
         turnPlayerId: firstTurn,
         timeRemaining: Math.ceil(TURN_TIME_MS / 1000),
         yourWord: playerWord,
         yourTheme: theme,
+        isImpostor: impostorIds.includes(p.id),
       });
     }
 
@@ -97,6 +128,7 @@ export const duoChaosService = {
     scheduleTimer(roomId, TURN_TIME_MS, () => {
       this.endTurn(roomId, callbacks);
     });
+    await setNextAction(roomId, TURN_TIME_MS);
   },
 
   async sendWord(roomId: string, playerId: string, word: string, callbacks: DuoChaosCallbacks): Promise<void> {
@@ -136,6 +168,7 @@ export const duoChaosService = {
     scheduleTimer(roomId, TURN_TIME_MS, () => {
       this.endTurn(roomId, callbacks);
     });
+    await setNextAction(roomId, TURN_TIME_MS);
   },
 
   async markPair(roomId: string, playerId: string, targetId: string, callbacks: DuoChaosCallbacks): Promise<void> {
@@ -165,6 +198,7 @@ export const duoChaosService = {
         scheduleTimer(roomId, REVEAL_TIME_MS, () => {
           this.finishGame(roomId, result.winnerIds, result.reason, callbacks);
         });
+        await setNextAction(roomId, REVEAL_TIME_MS);
       }
     }
   },
@@ -195,12 +229,13 @@ export const duoChaosService = {
     const players = await callbacks.getRoomPlayers(roomId);
     const payload = buildGamePayload(game, players);
 
-    const playerWord = getPlayerWord(playerId, game.pairs, game.impostorIds, game.playerWords);
+    const playerWord = getPlayerWord(playerId, game.impostorIds, game.playerWords);
 
     callbacks.emitToPlayer(playerId, 'duo-chaos:state', {
       ...payload,
       yourWord: playerWord,
       yourTheme: game.theme,
+      isImpostor: game.impostorIds.includes(playerId),
     });
   },
 

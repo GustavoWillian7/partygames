@@ -18,6 +18,7 @@ export interface ImpostorGame {
   rounds: ImpostorRound[];
   roundTimerEndsAt?: number;
   votingTimerEndsAt?: number;
+  nextActionAt?: number; // timestamp para próxima ação automática (reveal/nextRound/finish)
 }
 
 export interface ImpostorStatePayload {

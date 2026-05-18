@@ -2,7 +2,7 @@ import { Server as SocketServer, Socket } from 'socket.io';
 import { z } from 'zod';
 import { duoChaosService } from './duo-chaos.service';
 import { sendWordSchema, markPairSchema } from './duo-chaos.schema';
-import { getSocket } from '../../socketRegistry';
+import { getAllSockets } from '../../socketRegistry';
 
 function translateZodMessage(msg: string): string {
   if (msg.includes('String must contain at most')) {
@@ -90,8 +90,7 @@ function buildCallbacks(io: SocketServer, roomId: string) {
       io.to(roomId).emit(event, payload);
     },
     emitToPlayer: (playerId: string, event: string, payload: unknown) => {
-      const targetSocket = getSocket(playerId);
-      if (targetSocket) {
+      for (const targetSocket of getAllSockets(playerId)) {
         targetSocket.emit(event, payload);
       }
     },

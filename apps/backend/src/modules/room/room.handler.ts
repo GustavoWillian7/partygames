@@ -8,7 +8,7 @@ import {
   updateSettingsSchema,
   startGameSchema,
 } from './room.schema';
-import { getSocket } from '../../socketRegistry';
+import { getAllSockets } from '../../socketRegistry';
 import { impostorService } from '../impostor/impostor.service';
 import { duoChaosService } from '../duo-chaos/duo-chaos.service';
 import type { Player } from '@partygames/shared';
@@ -61,8 +61,7 @@ function buildImpostorCallbacks(io: SocketServer, roomId: string) {
       io.to(roomId).emit(event, payload);
     },
     emitToPlayer: (playerId: string, event: string, payload: unknown) => {
-      const targetSocket = getSocket(playerId);
-      if (targetSocket) {
+      for (const targetSocket of getAllSockets(playerId)) {
         targetSocket.emit(event, payload);
       }
     },
@@ -89,8 +88,7 @@ function buildDuoChaosCallbacks(io: SocketServer, roomId: string) {
       io.to(roomId).emit(event, payload);
     },
     emitToPlayer: (playerId: string, event: string, payload: unknown) => {
-      const targetSocket = getSocket(playerId);
-      if (targetSocket) {
+      for (const targetSocket of getAllSockets(playerId)) {
         targetSocket.emit(event, payload);
       }
     },
@@ -152,10 +150,15 @@ export function roomHandler(io: SocketServer, socket: Socket) {
   socket.on('room:leave', async () => {
     try {
       const { room, newHostId } = await roomService.leaveRoom(playerId);
-      if (!room) return;
+      if (!room) {
+        socket.emit('room:left', { success: true });
+        return;
+      }
       socket.leave(room.id);
+      socket.emit('room:left', { success: true });
       io.to(room.id).emit('room:player-left', { playerId, newHostId });
     } catch (err) {
+      socket.emit('room:left', { success: false, message: err instanceof Error ? err.message : 'Failed to leave room' });
       socket.emit('room:error', { message: err instanceof Error ? err.message : 'Failed to leave room' });
     }
   });
@@ -171,8 +174,7 @@ export function roomHandler(io: SocketServer, socket: Socket) {
       const room = await roomService.kickPlayer(roomId, data.playerId, playerId);
       io.to(room.id).emit('room:player-left', { playerId: data.playerId });
 
-      const kickedSocket = getSocket(data.playerId);
-      if (kickedSocket) {
+      for (const kickedSocket of getAllSockets(data.playerId)) {
         kickedSocket.leave(room.id);
         kickedSocket.emit('room:error', { message: 'You were kicked from the room' });
       }

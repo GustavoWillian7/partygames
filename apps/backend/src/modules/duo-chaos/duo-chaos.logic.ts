@@ -17,11 +17,11 @@ export function pickWords(count: number, themeGroupId?: string): WordSet[] {
 
 export function getPlayerWord(
   playerId: string,
-  pairs: Record<string, string>,
   impostorIds: string[],
   playerWords: Record<string, string>
-): string {
-  return playerWords[playerId] ?? '???';
+): string | undefined {
+  if (impostorIds.includes(playerId)) return undefined;
+  return playerWords[playerId];
 }
 
 export function assignRoles(playerIds: string[]): {
@@ -65,7 +65,6 @@ export function buildPlayerWords(
   wordSets: WordSet[]
 ): { playerWords: Record<string, string>; theme: string } {
   const playerWords: Record<string, string> = {};
-  const pairPlayers = Object.keys(pairs);
   const themes = new Set<string>();
 
   // Distribuir palavras para duplas
@@ -81,12 +80,13 @@ export function buildPlayerWords(
     themes.add(ws.theme);
   }
 
-  // Distribuir palavras para impostores (usam outsiderWord de uma das entradas sorteadas)
-  const impostorWordSet = wordSets[Math.floor(Math.random() * wordSets.length)];
+  // Impostores não recebem palavra — apenas o tema geral
   for (const id of impostorIds) {
-    playerWords[id] = impostorWordSet.outsiderWord;
+    // não atribuir palavra
   }
-  themes.add(impostorWordSet.theme);
+  if (wordSets.length > 0) {
+    themes.add(wordSets[0].theme);
+  }
 
   return { playerWords, theme: Array.from(themes).join(' / ') };
 }

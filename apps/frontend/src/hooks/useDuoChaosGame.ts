@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState, useCallback } from 'react';
 import { getSocket } from '../socket/socketManager';
 import { useAuthStore } from '../store/useAuthStore';
+import { useRoomStore } from '../store/useRoomStore';
 
 export type DuoChaosPhase = 'setup' | 'playing' | 'finished';
 
@@ -13,6 +14,7 @@ export interface DuoChaosGameState {
   chatHistory: { playerId: string; word: string; timestamp: Date }[];
   yourWord?: string;
   yourTheme?: string;
+  isImpostor?: boolean;
   winnerIds?: string[];
   reason?: string;
 }
@@ -73,6 +75,7 @@ export function useDuoChaosGame() {
       chatHistory: { playerId: string; word: string; timestamp: Date }[];
       yourWord?: string;
       yourTheme?: string;
+      isImpostor?: boolean;
     }) => {
       setState((prev) => ({
         ...prev,
@@ -82,8 +85,9 @@ export function useDuoChaosGame() {
         players: payload.players,
         wordsGiven: payload.wordsGiven,
         chatHistory: payload.chatHistory,
-        yourWord: payload.yourWord,
-        yourTheme: payload.yourTheme,
+        yourWord: payload.yourWord ?? prev.yourWord,
+        yourTheme: payload.yourTheme ?? prev.yourTheme,
+        isImpostor: payload.isImpostor ?? prev.isImpostor,
       }));
       if (payload.phase === 'playing') {
         startTimer(payload.timeRemaining);
@@ -95,14 +99,17 @@ export function useDuoChaosGame() {
       timeRemaining: number;
       yourWord?: string;
       yourTheme?: string;
+      isImpostor?: boolean;
     }) => {
       setState((prev) => ({
         ...prev,
         phase: 'playing',
         turnPlayerId: payload.turnPlayerId,
         wordsGiven: {},
+        // Evento broadcast pode não ter dados individuais — preservar se ausente
         yourWord: payload.yourWord ?? prev.yourWord,
         yourTheme: payload.yourTheme ?? prev.yourTheme,
+        isImpostor: payload.isImpostor ?? prev.isImpostor,
       }));
       startTimer(payload.timeRemaining);
     };
@@ -132,6 +139,7 @@ export function useDuoChaosGame() {
         winnerIds: payload.winnerIds,
         reason: payload.reason,
       }));
+      useRoomStore.getState().addLog(`🏁 Encontre sua Dupla terminou: ${payload.reason}`);
     };
 
     const onError = (payload: { code: string; message: string }) => {
@@ -141,7 +149,12 @@ export function useDuoChaosGame() {
       }
     };
 
+    const onRoomState = (room: { id: string; players: { id: string; name: string }[]; status: string }) => {
+      useRoomStore.getState().setRoom(room as import('@partygames/shared').Room);
+    };
+
     socket.on('room:game-started', onGameStarted);
+    socket.on('room:state', onRoomState);
     socket.on('duo-chaos:state', onState);
     socket.on('duo-chaos:turn-start', onTurnStart);
     socket.on('duo-chaos:word-received', onWordReceived);
@@ -153,6 +166,7 @@ export function useDuoChaosGame() {
 
     return () => {
       socket.off('room:game-started', onGameStarted);
+      socket.off('room:state', onRoomState);
       socket.off('duo-chaos:state', onState);
       socket.off('duo-chaos:turn-start', onTurnStart);
       socket.off('duo-chaos:word-received', onWordReceived);
@@ -171,7 +185,7 @@ export function useDuoChaosGame() {
   const markPair = useCallback((targetPlayerId: string) => {
     const socket = getSocket();
     socket.emit('duo-chaos:mark-pair', { targetPlayerId });
-    setMarkedTarget(targetPlayerId);
+    // Não atualizar estado otimisticamente — aguardar confirmação do backend via 'duo-chaos:pair-marked'
   }, []);
 
   const isMyTurn = player?.id === state.turnPlayerId;
