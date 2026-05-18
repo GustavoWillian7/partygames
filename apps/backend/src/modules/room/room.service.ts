@@ -126,9 +126,19 @@ export const roomService = {
   async joinRoom(roomId: string, player: Player): Promise<Room> {
     const room = await getRoomById(roomId);
     if (!room) throw new Error('Room not found');
-    if (room.players.some((p) => p.id === player.id)) {
-      throw new Error('Player already in room');
+
+    const existingPlayer = room.players.find((p) => p.id === player.id);
+    if (existingPlayer) {
+      // Jogador já está na sala — atualizar socket e status (reconexão/refresh)
+      existingPlayer.socketId = player.socketId;
+      existingPlayer.status = 'online';
+      room.updatedAt = new Date();
+      await saveRoom(room);
+      await redis.set(`playerRoom:${player.id}`, room.id);
+      clearEmptyRoomTimer(room.id);
+      return room;
     }
+
     if (room.players.length >= room.settings.maxPlayers) {
       throw new Error('Room is full');
     }

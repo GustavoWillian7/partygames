@@ -75,12 +75,12 @@ export default function AvatarOrb({
         />
       </div>
 
-      <div className="flex items-center gap-1">
-        <span className={`text-xs ${isYou ? 'text-primary font-medium' : 'text-muted'}`}>
+      <div className="flex items-center gap-1 min-w-0 max-w-full">
+        <span className={`text-xs truncate max-w-[80px] ${isYou ? 'text-primary font-medium' : 'text-muted'}`}>
           {isYou ? 'Você' : name}
         </span>
         {isHost && (
-          <span className="text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full border border-primary/30">
+          <span className="text-[10px] bg-primary/15 text-primary px-1.5 py-0.5 rounded-full border border-primary/30 shrink-0">
             Host
           </span>
         )}

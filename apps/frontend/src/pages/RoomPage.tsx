@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../store/useAuthStore';
@@ -38,6 +38,7 @@ export default function RoomPage() {
   const [showSettings, setShowSettings] = useState(false);
   const [settingsForm, setSettingsForm] = useState<Partial<RoomSettings>>({});
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const isLeavingRef = useRef(false);
 
   const isHost = currentRoom?.hostId === player?.id;
 
@@ -50,6 +51,7 @@ export default function RoomPage() {
     const socket = getSocket();
 
     socket.on('room:state', (room) => {
+      if (isLeavingRef.current) return;
       setRoom(room);
       setSettingsForm(room.settings);
     });
@@ -66,13 +68,21 @@ export default function RoomPage() {
       playerReconnected(p);
       addLog(`🔄 ${p.name} reconectou`);
     });
-    socket.on('room:error', ({ message }) => setError(message));
+    socket.on('room:error', ({ message }) => {
+      if (isLeavingRef.current) return;
+      setError(message);
+    });
+    socket.on('room:left', () => {
+      // Navegar para fora quando o backend confirmar saída (kick, etc)
+      clearRoom();
+      navigate('/');
+    });
     socket.on('room:game-started', ({ gameType }) => {
       addLog(`🎮 Jogo iniciado: ${gameType === 'impostor' ? 'Jogo do Impostor' : 'Encontre sua Dupla'}`);
       navigate(`/game/${gameType}`);
     });
 
-    if (!currentRoom && roomId) {
+    if (!currentRoom && roomId && !isLeavingRef.current) {
       socket.emit('room:join', { roomId });
     }
 
@@ -82,14 +92,23 @@ export default function RoomPage() {
       socket.off('room:player-left');
       socket.off('room:player-reconnected');
       socket.off('room:error');
+      socket.off('room:left');
       socket.off('room:game-started');
     };
   }, [token, navigate, roomId, currentRoom, setRoom, playerJoined, playerLeft, playerReconnected, addLog]);
 
+  // Reset isLeaving quando entra em uma nova sala
+  useEffect(() => {
+    if (currentRoom) {
+      isLeavingRef.current = false;
+    }
+  }, [currentRoom?.id]);
+
   const handleLeave = async () => {
+    isLeavingRef.current = true;
     await leaveRoomAndWait();
-    clearRoom();
-    navigate('/');
+    // O listener 'room:left' cuida de clearRoom + navigate
+    // Se o backend falhar, o timeout de leaveRoomAndWait resolve e voltamos ao normal
   };
 
   const handleKick = (playerId: string) => {
@@ -204,20 +223,22 @@ export default function RoomPage() {
                       initial={{ opacity: 0, x: -10 }}
                       animate={{ opacity: 1, x: 0 }}
                       exit={{ opacity: 0, x: -10 }}
-                      className="flex items-center justify-between group"
+                      className="flex items-center justify-between group min-w-0"
                     >
-                      <AvatarOrb
-                        name={p.name}
-                        isHost={p.isHost}
-                        isYou={p.id === player?.id}
-                        status={p.status === 'disconnected' ? 'disconnected' : p.status === 'spectator' ? 'spectator' : 'online'}
-                        size="sm"
-                      />
+                      <div className="min-w-0 flex-1">
+                        <AvatarOrb
+                          name={p.name}
+                          isHost={p.isHost}
+                          isYou={p.id === player?.id}
+                          status={p.status === 'disconnected' ? 'disconnected' : p.status === 'spectator' ? 'spectator' : 'online'}
+                          size="sm"
+                        />
+                      </div>
 
                       {isHost && p.id !== player?.id && currentRoom.status === 'waiting' && (
                         <button
                           onClick={() => handleKick(p.id)}
-                          className="opacity-0 group-hover:opacity-100 text-[10px] text-danger/70 hover:text-danger transition-all px-2 py-1 rounded hover:bg-danger/10"
+                          className="opacity-0 group-hover:opacity-100 text-[10px] text-danger/70 hover:text-danger transition-all px-2 py-1 rounded hover:bg-danger/10 shrink-0"
                         >
                           Remover
                         </button>
