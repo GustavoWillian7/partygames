@@ -41,6 +41,9 @@ export default function RoomPage() {
   const isLeavingRef = useRef(false);
 
   const isHost = currentRoom?.hostId === player?.id;
+  const currentRoomRef = useRef(currentRoom);
+  currentRoomRef.current = currentRoom;
+  const hasReceivedStateRef = useRef(false);
 
   useEffect(() => {
     if (!token) {
@@ -49,9 +52,11 @@ export default function RoomPage() {
     }
 
     const socket = getSocket();
+    hasReceivedStateRef.current = false;
 
     socket.on('room:state', (room) => {
       if (isLeavingRef.current) return;
+      hasReceivedStateRef.current = true;
       setRoom(room);
       setSettingsForm(room.settings);
     });
@@ -60,7 +65,7 @@ export default function RoomPage() {
       addLog(`➡️ ${p.name} entrou na sala`);
     });
     socket.on('room:player-left', ({ playerId, newHostId }) => {
-      const leavingPlayer = currentRoom?.players.find((p) => p.id === playerId);
+      const leavingPlayer = currentRoomRef.current?.players.find((p) => p.id === playerId);
       playerLeft(playerId, newHostId);
       if (leavingPlayer) addLog(`⬅️ ${leavingPlayer.name} saiu da sala`);
     });
@@ -82,11 +87,27 @@ export default function RoomPage() {
       navigate(`/game/${gameType}`);
     });
 
-    if (!currentRoom && roomId && !isLeavingRef.current) {
-      socket.emit('room:join', { roomId });
+    // Quando o jogo termina no backend, forçar re-sincronização da sala
+    const onGameOver = () => {
+      socket.emit('room:request-state');
+    };
+    socket.on('impostor:game-over', onGameOver);
+    socket.on('duo-chaos:game-over', onGameOver);
+
+    // Solicitar estado atual sem side-effects de join
+    if (roomId && !isLeavingRef.current) {
+      socket.emit('room:request-state');
     }
 
+    // Fallback: se não receber estado em 2s, tentar join automático
+    const fallbackTimer = setTimeout(() => {
+      if (!hasReceivedStateRef.current && roomId && !isLeavingRef.current) {
+        socket.emit('room:join', { roomId });
+      }
+    }, 2000);
+
     return () => {
+      clearTimeout(fallbackTimer);
       socket.off('room:state');
       socket.off('room:player-joined');
       socket.off('room:player-left');
@@ -94,8 +115,10 @@ export default function RoomPage() {
       socket.off('room:error');
       socket.off('room:left');
       socket.off('room:game-started');
+      socket.off('impostor:game-over', onGameOver);
+      socket.off('duo-chaos:game-over', onGameOver);
     };
-  }, [token, navigate, roomId, currentRoom, setRoom, playerJoined, playerLeft, playerReconnected, addLog]);
+  }, [token, navigate, roomId, setRoom, playerJoined, playerLeft, playerReconnected, addLog]);
 
   // Reset isLeaving quando entra em uma nova sala
   useEffect(() => {
@@ -312,6 +335,25 @@ export default function RoomPage() {
           animate={{ opacity: 1, y: 0 }}
           className="max-w-2xl mx-auto lg:mx-0 space-y-5"
         >
+          {/* Contador de prontos */}
+          {currentRoom.status === 'waiting' && (
+            <GlassCard className="text-center py-4" hover={false}>
+              <div className="flex items-center justify-center gap-3">
+                <span className="text-2xl">👥</span>
+                <div>
+                  <p className="text-sm text-muted">
+                    {currentRoom.players.filter((p) => p.status !== 'disconnected').length} / {currentRoom.players.length} jogadores online
+                  </p>
+                  {currentRoom.players.filter((p) => p.status === 'disconnected').length > 0 && (
+                    <p className="text-[11px] text-warning mt-0.5">
+                      {currentRoom.players.filter((p) => p.status === 'disconnected').length} desconectado(s)
+                    </p>
+                  )}
+                </div>
+              </div>
+            </GlassCard>
+          )}
+
           {/* Host Controls */}
           {isHost && currentRoom.status === 'waiting' && (
             <>
@@ -437,9 +479,9 @@ export default function RoomPage() {
               />
               <h3 className="font-display text-2xl font-bold text-accent mb-2">Jogo em andamento!</h3>
               <p className="text-muted max-w-sm mx-auto mb-6">
-                A partida já começou. Você pode assistir e aguardar a próxima rodada.
+                A partida já começou. Aguarde o término para participar da próxima rodada.
               </p>
-              <div className="flex flex-wrap justify-center gap-2">
+              <div className="flex flex-wrap justify-center gap-2 mb-6">
                 {currentRoom.players.filter((p) => p.status !== 'spectator').map((p) => (
                   <motion.span
                     key={p.id}
@@ -453,6 +495,15 @@ export default function RoomPage() {
                   </motion.span>
                 ))}
               </div>
+              <button
+                onClick={() => {
+                  const socket = getSocket();
+                  socket.emit('room:request-state');
+                }}
+                className="text-sm text-accent hover:text-accent/80 underline transition-colors"
+              >
+                Verificar status da partida
+              </button>
             </GlassCard>
           )}
 

@@ -323,7 +323,11 @@ export const impostorService = {
 
     // Notificar que o jogo terminou para atualizar a sala
     if (callbacks.onGameFinished) {
-      await callbacks.onGameFinished(roomId);
+      try {
+        await callbacks.onGameFinished(roomId);
+      } catch (err) {
+        console.error('[impostor.finishGame] onGameFinished failed:', err);
+      }
     }
   },
 

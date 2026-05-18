@@ -163,6 +163,39 @@ export function roomHandler(io: SocketServer, socket: Socket) {
     }
   });
 
+  socket.on('room:request-state', async () => {
+    try {
+      const roomId = await roomService.getPlayerRoomId(playerId);
+      if (!roomId) {
+        socket.emit('room:error', { message: 'You are not in a room' });
+        return;
+      }
+      let room = await roomService.getRoom(roomId);
+      if (!room) {
+        socket.emit('room:error', { message: 'Room not found' });
+        return;
+      }
+
+      // Se a sala está como 'playing', verificar se o jogo já terminou no Redis
+      if (room.status === 'playing') {
+        const impostorGame = await impostorService.getGameState(roomId);
+        const duoChaosGame = await duoChaosService.getGameState(roomId);
+        const game = impostorGame ?? duoChaosGame;
+        if (game?.status === 'finished') {
+          room.status = 'waiting';
+          room.currentGame = undefined;
+          room.updatedAt = new Date();
+          await roomService.updateRoom(room);
+        }
+      }
+
+      socket.join(room.id);
+      socket.emit('room:state', room);
+    } catch (err) {
+      socket.emit('room:error', { message: err instanceof Error ? err.message : 'Failed to get room state' });
+    }
+  });
+
   socket.on('room:kick', async (payload) => {
     try {
       const data = validatePayload(kickPlayerSchema, payload);

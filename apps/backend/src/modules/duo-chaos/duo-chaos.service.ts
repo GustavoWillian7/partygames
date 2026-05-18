@@ -218,7 +218,11 @@ export const duoChaosService = {
 
     // Notificar que o jogo terminou para atualizar a sala
     if (callbacks.onGameFinished) {
-      await callbacks.onGameFinished(roomId);
+      try {
+        await callbacks.onGameFinished(roomId);
+      } catch (err) {
+        console.error('[duo-chaos.finishGame] onGameFinished failed:', err);
+      }
     }
   },
 
@@ -237,6 +241,10 @@ export const duoChaosService = {
       yourTheme: game.theme,
       isImpostor: game.impostorIds.includes(playerId),
     });
+  },
+
+  async getGameState(roomId: string): Promise<DuoChaosGame | null> {
+    return getGame(roomId);
   },
 
   async abandonGame(roomId: string): Promise<void> {

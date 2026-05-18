@@ -84,25 +84,12 @@ async function main() {
       socket.disconnect(true);
     }
 
-    // 2. Limpar salas e jogos do Redis
-    console.log('[Server] Cleaning up Redis data...');
-    const roomKeys = await redis.keys('room:*');
-    const gameKeys = await redis.keys('game:*');
-    const registryKeys = await redis.keys('socket:*');
-    const allKeys = [...roomKeys, ...gameKeys, ...registryKeys];
-    if (allKeys.length > 0) {
-      await redis.del(...allKeys);
-      console.log(`[Server] Deleted ${allKeys.length} key(s) from Redis.`);
-    } else {
-      console.log('[Server] No Redis keys to clean.');
-    }
-
-    // 3. Fechar servidor HTTP
+    // 2. Fechar servidor HTTP
     httpServer.close(() => {
       console.log('[Server] HTTP server closed.');
     });
 
-    // 4. Fechar conexões
+    // 3. Fechar conexões Socket.io
     io.close(() => {
       console.log('[Server] Socket.io closed.');
     });

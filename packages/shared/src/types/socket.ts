@@ -10,6 +10,7 @@ export interface ClientEvents {
   'room:create': (payload: { name: string; settings?: Partial<RoomSettings> }) => void;
   'room:join': (payload: { roomId: string }) => void;
   'room:leave': () => void;
+  'room:request-state': () => void;
   'room:kick': (payload: { playerId: string }) => void;
   'room:update-settings': (payload: Partial<RoomSettings>) => void;
   'room:start-game': (payload: { gameType: GameType }) => void;
