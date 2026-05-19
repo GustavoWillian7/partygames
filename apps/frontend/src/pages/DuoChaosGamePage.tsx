@@ -58,6 +58,11 @@ export default function DuoChaosGamePage() {
               {state.timeRemaining}s
             </motion.div>
           )}
+          {state.phase === 'playing' && (
+            <NeonButton onClick={handleLeave} variant="ghost" size="sm" glow={false}>
+              Sair
+            </NeonButton>
+          )}
         </div>
 
         {error && (

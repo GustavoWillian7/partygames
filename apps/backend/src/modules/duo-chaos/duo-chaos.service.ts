@@ -243,6 +243,45 @@ export const duoChaosService = {
     });
   },
 
+  async playerLeft(roomId: string, playerId: string, callbacks: DuoChaosCallbacks): Promise<void> {
+    const game = await getGame(roomId);
+    if (!game || game.status === 'finished') return;
+
+    if (!game.activePlayerIds.includes(playerId)) return;
+    if (!game.eliminatedPlayerIds.includes(playerId)) {
+      game.eliminatedPlayerIds.push(playerId);
+    }
+
+    // Remover marcação de dupla do jogador que saiu
+    delete game.markedPair[playerId];
+    for (const [k, v] of Object.entries(game.markedPair)) {
+      if (v === playerId) delete game.markedPair[k];
+    }
+
+    await saveGame(game);
+
+    const players = await callbacks.getRoomPlayers(roomId);
+    const remainingActive = game.activePlayerIds.filter((id) => !game.eliminatedPlayerIds.includes(id));
+
+    // Se ficou muito pouco jogador, finalizar jogo
+    if (remainingActive.length < 3) {
+      const nonImpostor = remainingActive.filter((id) => !game.impostorIds.includes(id));
+      const remainingImpostors = remainingActive.filter((id) => game.impostorIds.includes(id));
+      if (remainingImpostors.length === 0 && nonImpostor.length >= 2) {
+        await this.finishGame(roomId, nonImpostor, 'Os impostores foram eliminados!', callbacks);
+      } else if (remainingImpostors.length > 0 && nonImpostor.length <= remainingImpostors.length) {
+        await this.finishGame(roomId, remainingImpostors, 'Os impostores dominaram!', callbacks);
+      }
+      return;
+    }
+
+    // Se o jogador da vez saiu, avançar turno
+    if (game.turnPlayerId === playerId) {
+      clearGameTimer(roomId);
+      await this.endTurn(roomId, callbacks);
+    }
+  },
+
   async getGameState(roomId: string): Promise<DuoChaosGame | null> {
     return getGame(roomId);
   },

@@ -139,10 +139,18 @@ export function useImpostorGame() {
     };
 
     const onVoteReceived = (payload: { voterId: string; votedId: string | null }) => {
-      setState((prev) => ({
-        ...prev,
-        votes: { ...prev.votes, [payload.voterId]: payload.votedId },
-      }));
+      setState((prev) => {
+        const newVotes = { ...prev.votes, [payload.voterId]: payload.votedId };
+        // Se todos os jogadores ativos já votaram, parar o timer antecipadamente
+        const activeCount = prev.players.filter((p) => !p.isEliminated).length;
+        if (Object.keys(newVotes).length >= activeCount) {
+          stopTimer();
+        }
+        return {
+          ...prev,
+          votes: newVotes,
+        };
+      });
     };
 
     const onReveal = (payload: {

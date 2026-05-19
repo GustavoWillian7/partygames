@@ -1,5 +1,6 @@
 import type { Player } from '@partygames/shared';
 import { getThemeGroup } from '../../data/themeGroups';
+import { secureRandomInt, secureShuffle } from '../../utils/cryptoRandom';
 
 export interface WordSet {
   pairWord: string;
@@ -10,7 +11,7 @@ export interface WordSet {
 export function pickWords(count: number, themeGroupId?: string): WordSet[] {
   const group = getThemeGroup(themeGroupId ?? 'all');
   const entries = group?.entries.length ? group.entries : getThemeGroup('all')!.entries;
-  const shuffled = [...entries].sort(() => Math.random() - 0.5);
+  const shuffled = secureShuffle(entries);
   const selected = shuffled.slice(0, Math.min(count, shuffled.length));
   return selected.map((e) => e.duoChaos);
 }
@@ -29,7 +30,7 @@ export function assignRoles(playerIds: string[]): {
   impostorIds: string[];
   pairCount: number;
 } {
-  const shuffled = [...playerIds].sort(() => Math.random() - 0.5);
+  const shuffled = secureShuffle(playerIds);
   const n = playerIds.length;
 
   let pairCount: number;
@@ -131,9 +132,8 @@ export function checkGameOver(
   const bIsPair = pairs[mutualB] === mutualA;
 
   if (aIsPair && bIsPair) {
-    const winnerIds = Object.entries(pairs)
-      .filter(([k]) => !impostorIds.includes(k))
-      .map(([k]) => k);
+    // Apenas a dupla que se marcou mutuamente vence
+    const winnerIds = [mutualA, mutualB];
     return {
       gameOver: true,
       winnerIds,

@@ -170,7 +170,11 @@ export const impostorService = {
 
     if (allPlayersGaveClue(round.clues, game.activePlayerIds.filter((id) => !game.eliminatedPlayerIds.includes(id)))) {
       clearGameTimer(roomId);
-      await this.endRoundClues(roomId, callbacks);
+      // Delay de 3s para todos verem a última dica antes da votação
+      scheduleTimer(roomId, 3_000, () => {
+        this.endRoundClues(roomId, callbacks);
+      });
+      await setNextAction(roomId, 3_000);
     }
   },
 
@@ -327,6 +331,41 @@ export const impostorService = {
         await callbacks.onGameFinished(roomId);
       } catch (err) {
         console.error('[impostor.finishGame] onGameFinished failed:', err);
+      }
+    }
+  },
+
+  async playerLeft(roomId: string, playerId: string, callbacks: ImpostorCallbacks): Promise<void> {
+    const game = await getGame(roomId);
+    if (!game || game.status === 'finished') return;
+
+    if (!game.activePlayerIds.includes(playerId)) return;
+    if (!game.eliminatedPlayerIds.includes(playerId)) {
+      game.eliminatedPlayerIds.push(playerId);
+    }
+    await saveGame(game);
+
+    const players = await callbacks.getRoomPlayers(roomId);
+    const remainingActive = game.activePlayerIds.filter((id) => !game.eliminatedPlayerIds.includes(id));
+
+    // Se ficou muito pouco jogador, finalizar jogo
+    const result = checkGameOver(game.impostorIds, game.eliminatedPlayerIds, game.activePlayerIds);
+    if (result.gameOver) {
+      await this.finishGame(roomId, result.winnerIds, result.reason, callbacks);
+      return;
+    }
+
+    if (game.status === 'playing') {
+      const round = game.rounds[game.currentRound - 1];
+      if (allPlayersGaveClue(round.clues, remainingActive)) {
+        clearGameTimer(roomId);
+        await this.endRoundClues(roomId, callbacks);
+      }
+    } else if (game.status === 'voting') {
+      const round = game.rounds[game.currentRound - 1];
+      if (allPlayersVoted(round.votes, remainingActive)) {
+        clearGameTimer(roomId);
+        await this.endVoting(roomId, callbacks);
       }
     }
   },

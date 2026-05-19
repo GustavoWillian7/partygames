@@ -1,10 +1,11 @@
 import type { Player } from '@partygames/shared';
 import { getThemeGroup } from '../../data/themeGroups';
+import { secureRandomInt, secureShuffle } from '../../utils/cryptoRandom';
 
 export function pickWord(themeGroupId?: string): { word: string; theme: string } {
   const group = getThemeGroup(themeGroupId ?? 'all');
   const entries = group?.entries.length ? group.entries : getThemeGroup('all')!.entries;
-  const entry = entries[Math.floor(Math.random() * entries.length)];
+  const entry = entries[secureRandomInt(entries.length)];
   return entry.impostor;
 }
 
@@ -12,7 +13,7 @@ export function assignImpostors(
   playerIds: string[],
   count: number
 ): string[] {
-  const shuffled = [...playerIds].sort(() => Math.random() - 0.5);
+  const shuffled = secureShuffle(playerIds);
   return shuffled.slice(0, Math.max(1, Math.min(count, playerIds.length - 1)));
 }
 

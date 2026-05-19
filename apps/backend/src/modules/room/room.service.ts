@@ -1,6 +1,7 @@
 import { redis } from '../../config/redis';
 import { hasActiveSocket } from '../../socketRegistry';
 import { Room, Player, RoomSettings } from '@partygames/shared';
+import { secureRandomInt } from '../../utils/cryptoRandom';
 
 const RECONNECT_WINDOW_MS = 60_000;
 const EMPTY_ROOM_TTL_MS = 30_000;
@@ -13,7 +14,7 @@ function generateRoomCode(): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789';
   let code = '';
   for (let i = 0; i < 4; i++) {
-    code += chars.charAt(Math.floor(Math.random() * chars.length));
+    code += chars.charAt(secureRandomInt(chars.length));
   }
   return code;
 }

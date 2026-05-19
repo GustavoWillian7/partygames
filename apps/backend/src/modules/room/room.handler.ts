@@ -157,6 +157,17 @@ export function roomHandler(io: SocketServer, socket: Socket) {
       socket.leave(room.id);
       socket.emit('room:left', { success: true });
       io.to(room.id).emit('room:player-left', { playerId, newHostId });
+
+      // Notificar jogo em andamento sobre saída do jogador
+      if (room.status === 'playing') {
+        if (room.currentGame === 'impostor') {
+          const callbacks = buildImpostorCallbacks(io, room.id);
+          await impostorService.playerLeft(room.id, playerId, callbacks);
+        } else if (room.currentGame === 'duo-chaos') {
+          const callbacks = buildDuoChaosCallbacks(io, room.id);
+          await duoChaosService.playerLeft(room.id, playerId, callbacks);
+        }
+      }
     } catch (err) {
       socket.emit('room:left', { success: false, message: err instanceof Error ? err.message : 'Failed to leave room' });
       socket.emit('room:error', { message: err instanceof Error ? err.message : 'Failed to leave room' });
@@ -210,6 +221,17 @@ export function roomHandler(io: SocketServer, socket: Socket) {
       for (const kickedSocket of getAllSockets(data.playerId)) {
         kickedSocket.leave(room.id);
         kickedSocket.emit('room:error', { message: 'You were kicked from the room' });
+      }
+
+      // Notificar jogo em andamento sobre saída do jogador
+      if (room.status === 'playing') {
+        if (room.currentGame === 'impostor') {
+          const callbacks = buildImpostorCallbacks(io, room.id);
+          await impostorService.playerLeft(room.id, data.playerId, callbacks);
+        } else if (room.currentGame === 'duo-chaos') {
+          const callbacks = buildDuoChaosCallbacks(io, room.id);
+          await duoChaosService.playerLeft(room.id, data.playerId, callbacks);
+        }
       }
     } catch (err) {
       socket.emit('room:error', { message: err instanceof Error ? err.message : 'Failed to kick player' });

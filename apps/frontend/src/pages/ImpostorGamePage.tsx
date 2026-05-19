@@ -28,6 +28,7 @@ export default function ImpostorGamePage() {
   const activePlayers = state.players.filter((p) => !p.isEliminated);
   const eliminatedPlayer = state.players.find((p) => p.id === state.eliminatedThisRound);
   const myClueGiven = currentPlayerId ? state.clues[currentPlayerId] !== undefined : false;
+  const isEliminated = currentPlayerId ? state.players.find((p) => p.id === currentPlayerId)?.isEliminated ?? false : false;
 
   const handleSendClue = () => {
     if (!clueInput.trim()) return;
@@ -77,6 +78,11 @@ export default function ImpostorGamePage() {
             >
               {state.timeRemaining}s
             </motion.div>
+          )}
+          {(state.phase === 'playing' || state.phase === 'voting') && (
+            <NeonButton onClick={handleLeave} variant="ghost" size="sm" glow={false}>
+              Sair
+            </NeonButton>
           )}
         </div>
 
@@ -138,7 +144,12 @@ export default function ImpostorGamePage() {
               </GlassCard>
 
               {/* Clue Input */}
-              {!myClueGiven && (
+              {isEliminated ? (
+                <GlassCard variant="danger" className="text-center">
+                  <span className="text-2xl">🚫</span>
+                  <p className="text-danger font-medium">Você foi eliminado e não pode mais participar.</p>
+                </GlassCard>
+              ) : !myClueGiven ? (
                 <GlassCard>
                   <GlowInput
                     label="Envie sua dica (1 palavra)"
@@ -158,9 +169,7 @@ export default function ImpostorGamePage() {
                     Enviar Dica
                   </NeonButton>
                 </GlassCard>
-              )}
-
-              {myClueGiven && (
+              ) : (
                 <GlassCard variant="success" className="text-center">
                   <span className="text-2xl">✅</span>
                   <p className="text-success font-medium">Dica enviada! Aguarde os outros jogadores...</p>
@@ -213,7 +222,12 @@ export default function ImpostorGamePage() {
                 <p className="text-muted text-sm">Vote em quem você acha que é o impostor.</p>
               </GlassCard>
 
-              {!hasVoted && (
+              {isEliminated ? (
+                <GlassCard variant="danger" className="text-center">
+                  <span className="text-2xl">🚫</span>
+                  <p className="text-danger font-medium">Você foi eliminado e não pode mais votar.</p>
+                </GlassCard>
+              ) : !hasVoted ? (
                 <div className="space-y-2">
                   {activePlayers.map((p) => (
                     <motion.button
@@ -245,9 +259,7 @@ export default function ImpostorGamePage() {
                     Pular voto
                   </NeonButton>
                 </div>
-              )}
-
-              {hasVoted && (
+              ) : (
                 <GlassCard variant="accent" className="text-center">
                   <div className="py-4">
                     <div className="w-12 h-12 border-4 border-accent border-t-transparent rounded-full animate-spin mx-auto mb-3" />
