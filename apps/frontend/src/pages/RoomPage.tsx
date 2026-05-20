@@ -59,6 +59,15 @@ export default function RoomPage() {
       hasReceivedStateRef.current = true;
       setRoom(room);
       setSettingsForm(room.settings);
+
+      // Se a sala está em jogo e somos um jogador ativo (não espectador),
+      // redirecionar para a página do jogo para sincronizar estado
+      if (room.status === 'playing' && room.currentGame) {
+        const me = room.players.find((p) => p.id === player?.id);
+        if (me && me.status !== 'spectator') {
+          navigate(`/game/${room.currentGame}`);
+        }
+      }
     });
     socket.on('room:player-joined', ({ player: p }) => {
       playerJoined(p);

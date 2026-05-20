@@ -9,6 +9,22 @@ export function getSocket(): Socket<ServerEvents, ClientEvents> {
   if (!socket) {
     socket = io(SOCKET_URL, {
       autoConnect: false,
+      reconnection: true,
+      reconnectionAttempts: Infinity,
+      reconnectionDelay: 1000,
+      reconnectionDelayMax: 5000,
+      randomizationFactor: 0.5,
+    });
+
+    // Log de estado para debug
+    socket.on('connect', () => {
+      console.log('[Socket] Connected');
+    });
+    socket.on('disconnect', (reason) => {
+      console.log('[Socket] Disconnected:', reason);
+    });
+    socket.on('connect_error', (err) => {
+      console.error('[Socket] Connect error:', err.message);
     });
   }
   return socket;
@@ -16,10 +32,13 @@ export function getSocket(): Socket<ServerEvents, ClientEvents> {
 
 export function connectSocket(token: string | null): Socket<ServerEvents, ClientEvents> {
   const s = getSocket();
-  if (s.auth && typeof s.auth === 'object') {
-    (s.auth as any).token = token;
-  } else {
-    (s as any).auth = { token };
+  // Sempre atualizar auth antes de conectar/reconectar
+  if (token) {
+    if (s.auth && typeof s.auth === 'object') {
+      (s.auth as any).token = token;
+    } else {
+      (s as any).auth = { token };
+    }
   }
   if (!s.connected) {
     s.connect();

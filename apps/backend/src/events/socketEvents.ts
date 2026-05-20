@@ -5,6 +5,8 @@ import { roomService } from '../modules/room/room.service';
 import { roomHandler } from '../modules/room/room.handler';
 import { impostorHandler } from '../modules/impostor/impostor.handler';
 import { duoChaosHandler } from '../modules/duo-chaos/duo-chaos.handler';
+import { impostorService } from '../modules/impostor/impostor.service';
+import { duoChaosService } from '../modules/duo-chaos/duo-chaos.service';
 import { registerSocket, unregisterSocket } from '../socketRegistry';
 
 export function registerSocketEvents(io: SocketServer) {
@@ -38,6 +40,33 @@ export function registerSocketEvents(io: SocketServer) {
       socket.join(room.id);
       socket.emit('room:state', room);
       socket.to(room.id).emit('room:player-reconnected', { player });
+
+      // Se a sala está em jogo, reenviar estado do jogo para o jogador reconectado
+      if (room.status === 'playing' && room.currentGame) {
+        try {
+          if (room.currentGame === 'impostor') {
+            const callbacks = {
+              emitToRoom: () => {},
+              emitToPlayer: (pid: string, event: string, payload: unknown) => {
+                if (pid === playerId) socket.emit(event, payload);
+              },
+              getRoomPlayers: async () => room?.players ?? [],
+            };
+            await impostorService.sendCurrentState(room.id, playerId, callbacks);
+          } else if (room.currentGame === 'duo-chaos') {
+            const callbacks = {
+              emitToRoom: () => {},
+              emitToPlayer: (pid: string, event: string, payload: unknown) => {
+                if (pid === playerId) socket.emit(event, payload);
+              },
+              getRoomPlayers: async () => room?.players ?? [],
+            };
+            await duoChaosService.sendCurrentState(room.id, playerId, callbacks);
+          }
+        } catch (err) {
+          console.error('[reconnect] Failed to send game state:', err);
+        }
+      }
     }
 
     roomHandler(io, socket);

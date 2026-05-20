@@ -58,6 +58,15 @@ export function impostorHandler(io: SocketServer, socket: Socket) {
       const socketRoomId = Array.from(socket.rooms).find((r) => r !== socket.id);
       if (!socketRoomId) throw new Error('Not in a room');
 
+      // ✅ CORREÇÃO: busca o estado antes de votar e valida
+      const state = await impostorService.getGameState(socketRoomId);
+      if (!state || state.status !== 'voting') throw new Error('Votação não está ativa');
+
+      const isActive =
+        state.activePlayerIds.includes(playerId) &&
+        !state.eliminatedPlayerIds.includes(playerId);
+      if (!isActive) throw new Error('Você foi eliminado e não pode votar');
+
       const callbacks = buildCallbacks(io, socketRoomId);
       await impostorService.submitVote(socketRoomId, playerId, data.votedPlayerId, callbacks);
     } catch (err) {
