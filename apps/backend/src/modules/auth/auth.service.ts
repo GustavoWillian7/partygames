@@ -2,7 +2,10 @@ import bcrypt from 'bcryptjs';
 import jwt from 'jsonwebtoken';
 import { v4 as uuidv4 } from 'uuid';
 import { env } from '../../config/env';
+import { redis } from '../../config/redis';
 import { User } from './auth.model';
+
+const SESSION_TTL_SECONDS = 86400; // 24h
 
 function generateToken(playerId: string) {
   return jwt.sign({ playerId }, env.JWT_SECRET, { expiresIn: env.JWT_EXPIRES_IN as any });
@@ -31,7 +34,7 @@ export const authService = {
   async register(name: string, email: string, password: string) {
     const existing = await User.findOne({ email }).lean();
     if (existing) {
-      throw new Error('Email already in use');
+      throw new Error('Este email já está em uso');
     }
 
     const id = uuidv4();
@@ -53,16 +56,25 @@ export const authService = {
   async login(email: string, password: string) {
     const user = await User.findOne({ email }).lean();
     if (!user) {
-      throw new Error('Invalid credentials');
+      throw new Error('Email ou senha incorretos');
     }
 
     const valid = await bcrypt.compare(password, user.passwordHash);
     if (!valid) {
-      throw new Error('Invalid credentials');
+      throw new Error('Email ou senha incorretos');
+    }
+
+    // Verificar se já existe sessão ativa
+    const sessionKey = `auth:session:${user.id}`;
+    const existingSession = await redis.get(sessionKey);
+    if (existingSession) {
+      throw new Error('Esta conta já está em uso em outro dispositivo ou navegador');
     }
 
     const player = mapUserToProfile(user);
-    return { player, token: generateToken(user.id) };
+    const token = generateToken(user.id);
+    await redis.set(sessionKey, token, 'EX', SESSION_TTL_SECONDS);
+    return { player, token };
   },
 
   async guest(name: string) {
@@ -80,5 +92,9 @@ export const authService = {
 
     const player = mapUserToProfile(user);
     return { player, token: generateToken(id) };
+  },
+
+  async clearSession(playerId: string) {
+    await redis.del(`auth:session:${playerId}`);
   },
 };

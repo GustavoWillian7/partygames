@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Gamepad2, Target, Dices, Fingerprint } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { connectSocket } from '../socket/socketManager';
 import GlowInput from '../components/ui/GlowInput';
@@ -97,23 +98,23 @@ export default function AuthPage() {
             </p>
           </motion.div>
 
-          {/* Emoji stack */}
+          {/* Icon stack */}
           <motion.div
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             transition={{ delay: 0.4 }}
             className="flex items-center gap-3 mb-8"
           >
-            {['🎮', '🎯', '🎲', '🎭'].map((emoji, i) => (
-              <motion.span
+            {[Gamepad2, Target, Dices, Fingerprint].map((Icon, i) => (
+              <motion.div
                 key={i}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.5 + i * 0.08 }}
-                className="text-3xl"
+                className="text-3xl text-primary"
               >
-                {emoji}
-              </motion.span>
+                <Icon size={28} />
+              </motion.div>
             ))}
           </motion.div>
 

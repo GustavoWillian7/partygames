@@ -1,6 +1,15 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  Target,
+  Fingerprint,
+  Check,
+  Trophy,
+  Sparkles,
+  MessageSquare,
+  Users,
+} from 'lucide-react';
 import { useDuoChaosGame } from '../hooks/useDuoChaosGame';
 import { useRoomStore } from '../store/useRoomStore';
 import { leaveRoomAndWait } from '../socket/socketManager';
@@ -40,7 +49,7 @@ export default function DuoChaosGamePage() {
         <div className="flex items-center justify-between mb-6">
           <div>
             <div className="flex items-center gap-2">
-              <span className="text-2xl">🎯</span>
+              <Target size={24} className="text-accent" />
               <h1 className="text-2xl font-black text-transparent bg-clip-text bg-gradient-to-r from-primary to-accent neon-text">
                 Encontre sua Dupla
               </h1>
@@ -93,9 +102,9 @@ export default function DuoChaosGamePage() {
                       initial={{ scale: 0 }}
                       animate={{ scale: 1 }}
                       transition={{ type: 'spring' }}
-                      className="text-5xl mb-3"
+                      className="mb-3 flex justify-center"
                     >
-                      🎭
+                      <Fingerprint size={48} className="text-danger" />
                     </motion.div>
                     <p className="text-danger text-lg font-bold mb-2">Você é o impostor!</p>
                     <p className="text-muted text-sm mb-3">Você não tem palavra secreta.</p>
@@ -132,7 +141,7 @@ export default function DuoChaosGamePage() {
                   animate={{ scale: 1 }}
                   className={`text-xl font-bold ${isMyTurn ? 'text-accent neon-text-cyan' : 'text-text'}`}
                 >
-                  {isMyTurn ? '🎉 Você!' : currentTurnPlayer?.name ?? '...'}
+                  {isMyTurn ? 'Você!' : currentTurnPlayer?.name ?? '...'}
                 </motion.p>
                 {isMyTurn && (
                   <motion.div
@@ -172,7 +181,8 @@ export default function DuoChaosGamePage() {
               {state.chatHistory.length > 0 && (
                 <GlassCard>
                   <h3 className="text-sm font-bold text-muted mb-3 flex items-center gap-2">
-                    💬 Palavras enviadas
+                    <MessageSquare size={16} />
+                    Palavras enviadas
                   </h3>
                   <div className="space-y-2 max-h-48 overflow-y-auto custom-scrollbar">
                     {state.chatHistory.map((msg, idx) => {
@@ -216,7 +226,7 @@ export default function DuoChaosGamePage() {
                         `}
                       >
                         {p.name}
-                        {markedTarget === p.id && ' ✓'}
+                        {markedTarget === p.id && <Check size={14} className="inline ml-1" />}
                       </motion.button>
                     ))}
                 </div>
@@ -229,8 +239,8 @@ export default function DuoChaosGamePage() {
                     Você marcou{' '}
                     <span className="text-accent font-medium">
                       {state.players.find((p) => p.id === markedTarget)?.name}
-                    </span>{' '}
-                    como dupla. Aguardando...
+                    </span>
+                    {' '}como dupla. Aguardando...
                   </motion.p>
                 )}
               </GlassCard>
@@ -250,9 +260,9 @@ export default function DuoChaosGamePage() {
                   initial={{ scale: 0 }}
                   animate={{ scale: 1 }}
                   transition={{ type: 'spring', stiffness: 200, delay: 0.2 }}
-                  className="text-6xl mb-4"
+                  className="mb-4 flex justify-center"
                 >
-                  🏆
+                  <Trophy size={64} className="text-accent" />
                 </motion.div>
                 <h2 className="text-3xl font-black text-transparent bg-clip-text bg-gradient-to-r from-accent to-primary-light neon-text mb-4">
                   Fim de Jogo!
@@ -269,9 +279,10 @@ export default function DuoChaosGamePage() {
                           key={id}
                           initial={{ opacity: 0, scale: 0 }}
                           animate={{ opacity: 1, scale: 1 }}
-                          className="px-4 py-2 rounded-full bg-accent/20 text-accent font-bold border border-accent/30"
+                          className="px-4 py-2 rounded-full bg-accent/20 text-accent font-bold border border-accent/30 inline-flex items-center gap-1"
                         >
-                          🎉 {winner?.name ?? id}
+                          <Sparkles size={16} />
+                          {winner?.name ?? id}
                         </motion.span>
                       );
                     })}
@@ -285,7 +296,11 @@ export default function DuoChaosGamePage() {
                     className="mb-6"
                   >
                     <div className="inline-block px-6 py-3 rounded-2xl bg-success/20 border border-success/30">
-                      <p className="text-xl text-success font-bold">🎊 Você venceu! 🎊</p>
+                      <p className="text-xl text-success font-bold flex items-center justify-center gap-2">
+                        <Sparkles size={20} />
+                        Você venceu!
+                        <Sparkles size={20} />
+                      </p>
                     </div>
                   </motion.div>
                 )}
@@ -313,7 +328,8 @@ export default function DuoChaosGamePage() {
         {/* Players List */}
         <GlassCard className="mt-6">
           <h3 className="text-sm font-bold text-muted mb-4 flex items-center gap-2">
-            👥 Jogadores
+            <Users size={16} />
+            Jogadores
           </h3>
           <div className="grid grid-cols-2 gap-2">
             {state.players.map((p) => (

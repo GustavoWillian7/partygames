@@ -1,6 +1,16 @@
 import { useEffect, useState, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import {
+  LogOut,
+  Gamepad2,
+  Users,
+  Settings,
+  Menu,
+  X,
+  Fingerprint,
+  Target,
+} from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useRoomStore } from '../store/useRoomStore';
 import { getSocket, leaveRoomAndWait } from '../socket/socketManager';
@@ -71,7 +81,7 @@ export default function RoomPage() {
     });
     socket.on('room:player-joined', ({ player: p }) => {
       playerJoined(p);
-      addLog(`➡️ ${p.name} entrou na sala`);
+      addLog(`${p.name} entrou na sala`);
     });
     socket.on('room:player-left', ({ playerId, newHostId }) => {
       const leavingPlayer = currentRoomRef.current?.players.find((p) => p.id === playerId);
@@ -80,7 +90,7 @@ export default function RoomPage() {
     });
     socket.on('room:player-reconnected', ({ player: p }) => {
       playerReconnected(p);
-      addLog(`🔄 ${p.name} reconectou`);
+      addLog(`${p.name} reconectou`);
     });
     socket.on('room:error', ({ message }) => {
       if (isLeavingRef.current) return;
@@ -92,7 +102,7 @@ export default function RoomPage() {
       navigate('/');
     });
     socket.on('room:game-started', ({ gameType }) => {
-      addLog(`🎮 Jogo iniciado: ${gameType === 'impostor' ? 'Jogo do Impostor' : 'Encontre sua Dupla'}`);
+      addLog(`Jogo iniciado: ${gameType === 'impostor' ? 'Jogo do Impostor' : 'Encontre sua Dupla'}`);
       navigate(`/game/${gameType}`);
     });
 
@@ -204,7 +214,7 @@ export default function RoomPage() {
           onClick={() => setSidebarOpen(!sidebarOpen)}
           className="p-2 rounded-lg bg-surface/60 text-text border border-white/[0.08]"
         >
-          {sidebarOpen ? '✕' : '☰'}
+          {sidebarOpen ? <X size={20} /> : <Menu size={20} />}
         </button>
       </div>
 
@@ -322,7 +332,7 @@ export default function RoomPage() {
                   transition-all duration-200
                 "
               >
-                🚪 Sair da Sala
+                <LogOut size={16} className="inline mr-1" /> Sair da Sala
               </button>
             </div>
           </motion.aside>
@@ -348,7 +358,7 @@ export default function RoomPage() {
           {currentRoom.status === 'waiting' && (
             <GlassCard className="text-center py-4" hover={false}>
               <div className="flex items-center justify-center gap-3">
-                <span className="text-2xl">👥</span>
+                <Users size={24} className="text-primary" />
                 <div>
                   <p className="text-sm text-muted">
                     {currentRoom.players.filter((p) => p.status !== 'disconnected').length} / {currentRoom.players.length} jogadores online
@@ -370,7 +380,7 @@ export default function RoomPage() {
               <GlassCard sharp>
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="font-display text-base font-bold text-text flex items-center gap-2">
-                    ⚙️ Configurações
+                    <Settings size={16} className="inline mr-1" /> Configurações
                   </h3>
                   <button
                     onClick={() => setShowSettings(!showSettings)}
@@ -443,7 +453,7 @@ export default function RoomPage() {
               {/* Game Selection */}
               <GlassCard sharp>
                 <h3 className="font-display text-base font-bold text-text mb-4 flex items-center gap-2">
-                  🎮 Iniciar Jogo
+                  <Gamepad2 size={16} className="inline mr-1" /> Iniciar Jogo
                 </h3>
                 <p className="text-sm text-muted mb-4">Escolha um modo de jogo</p>
 
@@ -451,7 +461,7 @@ export default function RoomPage() {
                   <GameCard
                     title="Jogo do Impostor"
                     description="Descubra quem está mentindo! Um jogador é o impostor e não sabe a palavra secreta."
-                    icon="🎭"
+                    icon={<Fingerprint size={20} />}
                     minPlayers={3}
                     onClick={() => handleStartGame('impostor')}
                     disabled={currentRoom.players.length < 3}
@@ -459,7 +469,7 @@ export default function RoomPage() {
                   <GameCard
                     title="Encontre sua Dupla"
                     description="Encontre quem tem a mesma palavra que você no Modo Caos!"
-                    icon="🎯"
+                    icon={<Target size={20} />}
                     minPlayers={3}
                     onClick={() => handleStartGame('duo-chaos')}
                     disabled={currentRoom.players.length < 3}

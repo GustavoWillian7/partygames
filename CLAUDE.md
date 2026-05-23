@@ -66,6 +66,15 @@ Limpa o ambiente de desenvolvimento.
 
 ---
 
+### `/ui-ux-pro-max`
+Audita e aplica diretrizes de UX no projeto com base na skill UI/UX Pro Max.
+
+1. Pergunta qual tela/componente auditar
+2. Aplica as 10 diretrizes obrigatórias (cursor-pointer, contraste, reduced-motion, touch targets, loading states, focus visible, consistência de ícones, empty states, responsividade, feedback imediato)
+3. Gera relatório de gaps + correções sugeridas
+
+---
+
 ## Como criar um novo Skill
 
 1. Crie um arquivo `.md` em `.claude/skills/`

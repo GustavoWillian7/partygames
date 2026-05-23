@@ -1,6 +1,7 @@
 import { Server as SocketServer, Socket } from 'socket.io';
 import jwt from 'jsonwebtoken';
 import { env } from '../config/env';
+import { redis } from '../config/redis';
 import { roomService } from '../modules/room/room.service';
 import { roomHandler } from '../modules/room/room.handler';
 import { impostorHandler } from '../modules/impostor/impostor.handler';
@@ -8,6 +9,8 @@ import { duoChaosHandler } from '../modules/duo-chaos/duo-chaos.handler';
 import { impostorService } from '../modules/impostor/impostor.service';
 import { duoChaosService } from '../modules/duo-chaos/duo-chaos.service';
 import { registerSocket, unregisterSocket } from '../socketRegistry';
+
+const SESSION_TTL_SECONDS = 86400; // 24h
 
 export function registerSocketEvents(io: SocketServer) {
   io.on('connection', async (socket: Socket) => {
@@ -19,20 +22,23 @@ export function registerSocketEvents(io: SocketServer) {
         const decoded = jwt.verify(token, env.JWT_SECRET) as { playerId: string };
         playerId = decoded.playerId;
       } catch {
-        socket.emit('error', { code: 'AUTH_ERROR', message: 'Invalid token' });
+        socket.emit('error', { code: 'AUTH_ERROR', message: 'Token inválido' });
         socket.disconnect(true);
         return;
       }
     }
 
     if (!playerId) {
-      socket.emit('error', { code: 'AUTH_ERROR', message: 'Authentication required' });
+      socket.emit('error', { code: 'AUTH_ERROR', message: 'Autenticação necessária' });
       socket.disconnect(true);
       return;
     }
 
     socket.data.playerId = playerId;
     registerSocket(playerId, socket);
+
+    // Atualizar sessão ativa no Redis (para rastreamento de login único)
+    await redis.set(`auth:session:${playerId}`, token ?? '1', 'EX', SESSION_TTL_SECONDS);
 
     // Attempt reconnection
     const { room, player, reconnected } = await roomService.handleReconnect(playerId, socket.id);
@@ -75,6 +81,11 @@ export function registerSocketEvents(io: SocketServer) {
 
     socket.on('disconnect', () => {
       unregisterSocket(playerId, socket);
+      // Só limpar a sessão do Redis se não houver mais sockets ativos para este player
+      const { hasActiveSocket } = require('../socketRegistry');
+      if (!hasActiveSocket(playerId)) {
+        redis.del(`auth:session:${playerId}`).catch(() => {});
+      }
     });
   });
 }

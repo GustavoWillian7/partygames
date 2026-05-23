@@ -61,10 +61,23 @@ export function useImpostorGame() {
 
     const onGameStarted = (payload: { gameType: string; initialState: { players: { id: string; name: string }[] } }) => {
       if (payload.gameType === 'impostor') {
-        setState((prev) => ({
-          ...prev,
+        // Resetar estado completamente para evitar dados do jogo anterior
+        setState({
+          phase: 'setup',
+          currentRound: 0,
+          timeRemaining: 0,
+          clues: {},
+          votes: {},
           players: payload.initialState.players.map((p) => ({ ...p, isEliminated: false })),
-        }));
+          eliminatedThisRound: undefined,
+          impostorIds: undefined,
+          winnerIds: undefined,
+          reason: undefined,
+          wasTie: undefined,
+          yourWord: undefined,
+          yourTheme: undefined,
+          isImpostor: undefined,
+        });
       }
     };
 
@@ -177,7 +190,7 @@ export function useImpostorGame() {
         winnerIds: payload.winnerIds,
         reason: payload.reason,
       }));
-      useRoomStore.getState().addLog(`🏁 Jogo do Impostor terminou: ${payload.reason}`);
+      useRoomStore.getState().addLog(`Jogo do Impostor terminou: ${payload.reason}`);
     };
 
     const onError = (payload: { code: string; message: string }) => {

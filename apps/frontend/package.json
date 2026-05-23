@@ -13,6 +13,7 @@
   "dependencies": {
     "@partygames/shared": "workspace:*",
     "framer-motion": "^11.1.7",
+    "lucide-react": "^1.16.0",
     "react": "^18.2.0",
     "react-dom": "^18.2.0",
     "react-router-dom": "^7.15.0",

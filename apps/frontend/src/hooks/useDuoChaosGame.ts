@@ -59,10 +59,20 @@ export function useDuoChaosGame() {
 
     const onGameStarted = (payload: { gameType: string; initialState: { players: { id: string; name: string }[] } }) => {
       if (payload.gameType === 'duo-chaos') {
-        setState((prev) => ({
-          ...prev,
+        // Resetar estado completamente para evitar dados do jogo anterior
+        setState({
+          phase: 'setup',
+          turnPlayerId: '',
+          timeRemaining: 0,
           players: payload.initialState.players.map((p) => ({ ...p, isEliminated: false })),
-        }));
+          wordsGiven: {},
+          chatHistory: [],
+          yourWord: undefined,
+          yourTheme: undefined,
+          isImpostor: undefined,
+          winnerIds: undefined,
+          reason: undefined,
+        });
       }
     };
 
@@ -139,7 +149,7 @@ export function useDuoChaosGame() {
         winnerIds: payload.winnerIds,
         reason: payload.reason,
       }));
-      useRoomStore.getState().addLog(`🏁 Encontre sua Dupla terminou: ${payload.reason}`);
+      useRoomStore.getState().addLog(`Encontre sua Dupla terminou: ${payload.reason}`);
     };
 
     const onError = (payload: { code: string; message: string }) => {

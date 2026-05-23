@@ -3,7 +3,7 @@ import { motion } from 'framer-motion';
 interface GameCardProps {
   title: string;
   description: string;
-  icon: string;
+  icon: React.ReactNode;
   minPlayers: number;
   onClick: () => void;
   disabled?: boolean;

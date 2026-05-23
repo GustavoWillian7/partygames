@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
+import { Gamepad2, Plus, Link2 } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
 import { useRoomStore } from '../store/useRoomStore';
 import { getSocket, connectSocket, disconnectSocket } from '../socket/socketManager';
@@ -84,7 +85,7 @@ export default function HomePage() {
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-3"
           >
-            <span className="text-2xl">🎮</span>
+            <Gamepad2 size={24} className="text-primary" />
             <h1 className="font-display text-xl font-bold text-gradient tracking-tight">
               PastelariaGames
             </h1>
@@ -139,7 +140,7 @@ export default function HomePage() {
                 <div className="flex items-center gap-3 mb-5"
                 >
                   <div className="w-10 h-10 rounded-lg bg-primary/10 border border-primary/20 flex items-center justify-center">
-                    <span className="text-xl">➕</span>
+                    <Plus size={20} className="text-primary" />
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-text font-display">Criar Sala</h3>
@@ -190,7 +191,7 @@ export default function HomePage() {
                 <div className="flex items-center gap-3 mb-5"
                 >
                   <div className="w-10 h-10 rounded-lg bg-accent/10 border border-accent/20 flex items-center justify-center">
-                    <span className="text-xl">🔗</span>
+                    <Link2 size={20} className="text-accent" />
                   </div>
                   <div>
                     <h3 className="text-lg font-bold text-text font-display">Entrar</h3>
