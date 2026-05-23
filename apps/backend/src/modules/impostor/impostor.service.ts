@@ -10,6 +10,7 @@ import {
   allPlayersVoted,
   buildGamePayload,
   getPlayerWord,
+  shuffleTurnOrder,
 } from './impostor.logic';
 
 const ROUND_TIME_MS = 60_000;
@@ -102,11 +103,15 @@ export const impostorService = {
     const impostorCount = activeIds.length <= 4 ? 1 : activeIds.length <= 6 ? 1 : 2;
     const impostorIds = assignImpostors(activeIds, impostorCount);
 
+    const turnOrder = shuffleTurnOrder(activeIds);
+
     const round: ImpostorRound = {
       roundNumber: 1,
       clues: {},
       votes: {},
       status: 'clues',
+      turnOrder,
+      currentTurnIndex: 0,
     };
 
     const game: ImpostorGame = {
@@ -144,7 +149,10 @@ export const impostorService = {
 
     // Broadcast de estado público
     const payload = buildGamePayload(game, activePlayers);
-    callbacks.emitToRoom('impostor:round-start', payload);
+    callbacks.emitToRoom('impostor:round-start', {
+      ...payload,
+      turnPlayerId: turnOrder[0],
+    });
 
     // Timer de rodada
     scheduleTimer(roomId, ROUND_TIME_MS, () => {
@@ -162,13 +170,38 @@ export const impostorService = {
     if (round.clues[playerId]) throw new Error('Clue already given');
     if (game.eliminatedPlayerIds.includes(playerId)) throw new Error('Eliminated players cannot play');
 
+    // Verificar se é a vez do jogador
+    const currentTurnPlayerId = round.turnOrder[round.currentTurnIndex];
+    if (playerId !== currentTurnPlayerId) {
+      throw new Error('Não é a sua vez de dar a dica');
+    }
+
     round.clues[playerId] = word;
+
+    // Avançar para o próximo jogador na ordem que ainda não deu dica
+    let nextIndex = round.currentTurnIndex + 1;
+    const activeIds = game.activePlayerIds.filter((id) => !game.eliminatedPlayerIds.includes(id));
+    while (nextIndex < round.turnOrder.length) {
+      const nextPlayerId = round.turnOrder[nextIndex];
+      if (activeIds.includes(nextPlayerId) && round.clues[nextPlayerId] === undefined) {
+        break;
+      }
+      nextIndex++;
+    }
+    round.currentTurnIndex = nextIndex;
     await saveGame(game);
 
     const players = await callbacks.getRoomPlayers(roomId);
     callbacks.emitToRoom('impostor:clue-received', { playerId, word });
 
-    if (allPlayersGaveClue(round.clues, game.activePlayerIds.filter((id) => !game.eliminatedPlayerIds.includes(id)))) {
+    // Notificar próximo jogador da vez (se houver)
+    if (nextIndex < round.turnOrder.length) {
+      const nextTurnPlayerId = round.turnOrder[nextIndex];
+      callbacks.emitToRoom('impostor:turn-changed', { turnPlayerId: nextTurnPlayerId });
+    }
+
+    const remainingActive = activeIds.filter((id) => round.clues[id] === undefined);
+    if (remainingActive.length === 0) {
       clearGameTimer(roomId);
       // Delay de 3s para todos verem a última dica antes da votação
       scheduleTimer(roomId, 3_000, () => {
@@ -268,11 +301,15 @@ export const impostorService = {
     if (!game || game.status === 'finished') return;
 
     game.currentRound += 1;
+    const remainingActive = game.activePlayerIds.filter((id) => !game.eliminatedPlayerIds.includes(id));
+    const turnOrder = shuffleTurnOrder(remainingActive);
     const newRound: ImpostorRound = {
       roundNumber: game.currentRound,
       clues: {},
       votes: {},
       status: 'clues',
+      turnOrder,
+      currentTurnIndex: 0,
     };
     game.rounds.push(newRound);
     game.status = 'playing';
@@ -302,7 +339,10 @@ export const impostorService = {
     }
 
     const payload = buildGamePayload(game, players);
-    callbacks.emitToRoom('impostor:round-start', payload);
+    callbacks.emitToRoom('impostor:round-start', {
+      ...payload,
+      turnPlayerId: turnOrder[0],
+    });
 
     scheduleTimer(roomId, ROUND_TIME_MS, () => {
       this.endRoundClues(roomId, callbacks);
@@ -391,11 +431,15 @@ export const impostorService = {
     );
 
     const payload = buildGamePayload(game, players);
+    const currentRound = game.rounds[game.currentRound - 1];
+    const turnPlayerId = currentRound?.turnOrder[currentRound?.currentTurnIndex ?? 0] ?? undefined;
+
     callbacks.emitToPlayer(playerId, 'impostor:state', {
       ...payload,
       yourWord: playerWord,
       yourTheme: playerTheme,
       isImpostor,
+      turnPlayerId,
     });
   },
 };

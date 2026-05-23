@@ -42,8 +42,10 @@ export interface ServerEvents {
     yourWord?: string;
     yourTheme?: string;
     isImpostor?: boolean;
+    turnPlayerId?: string;
   }) => void;
   'impostor:clue-received': (payload: { playerId: string; word: string }) => void;
+  'impostor:turn-changed': (payload: { turnPlayerId: string }) => void;
   'impostor:voting-start': (payload: { players: Player[] }) => void;
   'impostor:vote-received': (payload: { voterId: string; votedId: string | null }) => void;
   'impostor:reveal': (payload: {
@@ -63,6 +65,7 @@ export interface ServerEvents {
     yourWord?: string;
     yourTheme?: string;
     isImpostor?: boolean;
+    turnPlayerId?: string;
   }) => void;
   'impostor:game-over': (payload: { winnerIds: string[]; reason: string }) => void;
 

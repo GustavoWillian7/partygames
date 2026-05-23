@@ -20,6 +20,7 @@ export interface ImpostorGameState {
   winnerIds?: string[];
   reason?: string;
   wasTie?: boolean;
+  turnPlayerId?: string;
 }
 
 export function useImpostorGame() {
@@ -31,6 +32,7 @@ export function useImpostorGame() {
     clues: {},
     votes: {},
     players: [],
+    turnPlayerId: undefined,
   });
   const [error, setError] = useState<string | null>(null);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
@@ -77,6 +79,7 @@ export function useImpostorGame() {
           yourWord: undefined,
           yourTheme: undefined,
           isImpostor: undefined,
+          turnPlayerId: undefined,
         });
       }
     };
@@ -92,6 +95,7 @@ export function useImpostorGame() {
       yourWord?: string;
       yourTheme?: string;
       isImpostor?: boolean;
+      turnPlayerId?: string;
     }) => {
       setState((prev) => ({
         ...prev,
@@ -105,6 +109,7 @@ export function useImpostorGame() {
         yourWord: payload.yourWord,
         yourTheme: payload.yourTheme,
         isImpostor: payload.isImpostor,
+        turnPlayerId: payload.turnPlayerId ?? prev.turnPlayerId,
       }));
       if (payload.phase === 'playing' || payload.phase === 'voting') {
         startTimer(payload.timeRemaining);
@@ -117,6 +122,7 @@ export function useImpostorGame() {
       yourWord?: string;
       yourTheme?: string;
       isImpostor?: boolean;
+      turnPlayerId?: string;
     }) => {
       setState((prev) => ({
         ...prev,
@@ -127,6 +133,7 @@ export function useImpostorGame() {
         yourWord: payload.yourWord ?? prev.yourWord,
         yourTheme: payload.yourTheme ?? prev.yourTheme,
         isImpostor: payload.isImpostor ?? prev.isImpostor,
+        turnPlayerId: payload.turnPlayerId ?? prev.turnPlayerId,
         clues: {},
         votes: {},
         eliminatedThisRound: undefined,
@@ -138,6 +145,13 @@ export function useImpostorGame() {
       setState((prev) => ({
         ...prev,
         clues: { ...prev.clues, [payload.playerId]: payload.word },
+      }));
+    };
+
+    const onTurnChanged = (payload: { turnPlayerId: string }) => {
+      setState((prev) => ({
+        ...prev,
+        turnPlayerId: payload.turnPlayerId,
       }));
     };
 
@@ -209,6 +223,7 @@ export function useImpostorGame() {
     socket.on('impostor:state', onState);
     socket.on('impostor:round-start', onRoundStart);
     socket.on('impostor:clue-received', onClueReceived);
+    socket.on('impostor:turn-changed', onTurnChanged);
     socket.on('impostor:voting-start', onVotingStart);
     socket.on('impostor:vote-received', onVoteReceived);
     socket.on('impostor:reveal', onReveal);
@@ -224,6 +239,7 @@ export function useImpostorGame() {
       socket.off('impostor:state', onState);
       socket.off('impostor:round-start', onRoundStart);
       socket.off('impostor:clue-received', onClueReceived);
+      socket.off('impostor:turn-changed', onTurnChanged);
       socket.off('impostor:voting-start', onVotingStart);
       socket.off('impostor:vote-received', onVoteReceived);
       socket.off('impostor:reveal', onReveal);

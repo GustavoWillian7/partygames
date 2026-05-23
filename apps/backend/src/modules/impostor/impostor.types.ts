@@ -4,6 +4,8 @@ export interface ImpostorRound {
   votes: Record<string, string | null>; // voterId -> votedId (null = skip)
   eliminatedId?: string;
   status: 'clues' | 'voting' | 'revealed';
+  turnOrder: string[]; // ordem aleatória dos jogadores para dar dicas
+  currentTurnIndex: number; // índice do jogador da vez
 }
 
 export interface ImpostorGame {

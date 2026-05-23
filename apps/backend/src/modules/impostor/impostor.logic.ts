@@ -101,6 +101,10 @@ export function allPlayersVoted(
   return activePlayerIds.every((id) => votes[id] !== undefined);
 }
 
+export function shuffleTurnOrder(playerIds: string[]): string[] {
+  return secureShuffle(playerIds);
+}
+
 export function buildGamePayload(
   game: {
     status: 'setup' | 'playing' | 'voting' | 'reveal' | 'finished';

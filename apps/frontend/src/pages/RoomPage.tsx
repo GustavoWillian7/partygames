@@ -3,9 +3,7 @@ import { useParams, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   LogOut,
-  Gamepad2,
   Users,
-  Settings,
   Menu,
   X,
   Fingerprint,
@@ -86,7 +84,7 @@ export default function RoomPage() {
     socket.on('room:player-left', ({ playerId, newHostId }) => {
       const leavingPlayer = currentRoomRef.current?.players.find((p) => p.id === playerId);
       playerLeft(playerId, newHostId);
-      if (leavingPlayer) addLog(`⬅️ ${leavingPlayer.name} saiu da sala`);
+      if (leavingPlayer) addLog(`${leavingPlayer.name} saiu da sala`);
     });
     socket.on('room:player-reconnected', ({ player: p }) => {
       playerReconnected(p);
@@ -379,9 +377,7 @@ export default function RoomPage() {
               {/* Settings Card */}
               <GlassCard sharp>
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="font-display text-base font-bold text-text flex items-center gap-2">
-                    <Settings size={16} className="inline mr-1" /> Configurações
-                  </h3>
+                  <h3 className="font-display text-base font-bold text-text">Configurações</h3>
                   <button
                     onClick={() => setShowSettings(!showSettings)}
                     className="text-sm text-muted hover:text-primary transition-colors"
@@ -452,9 +448,7 @@ export default function RoomPage() {
 
               {/* Game Selection */}
               <GlassCard sharp>
-                <h3 className="font-display text-base font-bold text-text mb-4 flex items-center gap-2">
-                  <Gamepad2 size={16} className="inline mr-1" /> Iniciar Jogo
-                </h3>
+                <h3 className="font-display text-base font-bold text-text mb-4">Iniciar Jogo</h3>
                 <p className="text-sm text-muted mb-4">Escolha um modo de jogo</p>
 
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">

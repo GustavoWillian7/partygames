@@ -3,13 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Fingerprint,
-  Ban,
-  CheckCircle2,
-  ScrollText,
-  Users,
   Trophy,
-  Sparkles,
-  User,
 } from 'lucide-react';
 import { useImpostorGame } from '../hooks/useImpostorGame';
 import { useAuthStore } from '../store/useAuthStore';
@@ -39,6 +33,7 @@ export default function ImpostorGamePage() {
   const eliminatedPlayer = state.players.find((p) => p.id === state.eliminatedThisRound);
   const myClueGiven = currentPlayerId ? state.clues[currentPlayerId] !== undefined : false;
   const isEliminated = currentPlayerId ? state.players.find((p) => p.id === currentPlayerId)?.isEliminated ?? false : false;
+  const isMyTurnToGiveClue = currentPlayerId === state.turnPlayerId;
 
   const handleSendClue = () => {
     if (!clueInput.trim()) return;
@@ -159,10 +154,13 @@ export default function ImpostorGamePage() {
                   {/* Clue Input */}
                   {isEliminated ? (
                     <GlassCard variant="danger" className="text-center">
-                      <Ban size={32} className="mx-auto text-danger mb-2" />
                       <p className="text-danger font-medium">Você foi eliminado e não pode mais participar.</p>
                     </GlassCard>
-                  ) : !myClueGiven ? (
+                  ) : myClueGiven ? (
+                    <GlassCard variant="success" className="text-center">
+                      <p className="text-success font-medium">Dica enviada! Aguarde os outros jogadores...</p>
+                    </GlassCard>
+                  ) : isMyTurnToGiveClue ? (
                     <GlassCard>
                       <GlowInput
                         label="Envie sua dica (1 palavra)"
@@ -183,19 +181,21 @@ export default function ImpostorGamePage() {
                       </NeonButton>
                     </GlassCard>
                   ) : (
-                    <GlassCard variant="success" className="text-center">
-                      <CheckCircle2 size={32} className="mx-auto text-success mb-2" />
-                      <p className="text-success font-medium">Dica enviada! Aguarde os outros jogadores...</p>
+                    <GlassCard className="text-center">
+                      <p className="text-muted text-sm mb-1">Aguarde sua vez</p>
+                      <p className="text-text font-medium">
+                        Vez de{' '}
+                        <span className="text-accent">
+                          {state.players.find((p) => p.id === state.turnPlayerId)?.name ?? '...'}
+                        </span>
+                      </p>
                     </GlassCard>
                   )}
 
                   {/* Clues */}
                   {Object.keys(state.clues).length > 0 && (
                     <GlassCard>
-                      <h3 className="text-lg font-bold text-text mb-4 flex items-center gap-2">
-                        <ScrollText size={18} />
-                        Dicas enviadas
-                      </h3>
+                      <h3 className="text-lg font-bold text-text mb-4">Dicas enviadas</h3>
                       <div className="space-y-2">
                         {state.players.map((p) => {
                           const clue = state.clues[p.id];
@@ -223,14 +223,12 @@ export default function ImpostorGamePage() {
                 {/* Right column: Voting (always visible during playing/voting, but active during voting) */}
                 <div className="space-y-4">
                   <GlassCard className="text-center">
-                    <Users size={40} className="mx-auto text-primary mb-2" />
-                    <h3 className="text-xl font-bold text-text mt-2">Quem é o impostor?</h3>
+                    <h3 className="text-xl font-bold text-text">Quem é o impostor?</h3>
                     <p className="text-muted text-sm">Vote em quem você acha que é o impostor.</p>
                   </GlassCard>
 
                   {isEliminated ? (
                     <GlassCard variant="danger" className="text-center">
-                      <Ban size={32} className="mx-auto text-danger mb-2" />
                       <p className="text-danger font-medium">Você foi eliminado e não pode mais votar.</p>
                     </GlassCard>
                   ) : !hasVoted ? (
@@ -309,7 +307,6 @@ export default function ImpostorGamePage() {
 
                 {state.wasTie ? (
                   <div className="py-4">
-                    <Users size={48} className="mx-auto text-muted mb-2" />
                     <p className="text-muted mt-2">Houve um empate! Ninguém foi eliminado.</p>
                   </div>
                 ) : eliminatedPlayer ? (
@@ -336,9 +333,8 @@ export default function ImpostorGamePage() {
                       <motion.p
                         initial={{ opacity: 0 }}
                         animate={{ opacity: 1 }}
-                        className="text-success font-bold mt-2 text-xl flex items-center justify-center gap-2"
+                        className="text-success font-bold mt-2 text-xl"
                       >
-                        <User size={24} />
                         Não era o impostor!
                       </motion.p>
                     )}
@@ -387,9 +383,8 @@ export default function ImpostorGamePage() {
                           key={id}
                           initial={{ opacity: 0, scale: 0 }}
                           animate={{ opacity: 1, scale: 1 }}
-                          className="px-4 py-2 rounded-full bg-accent/20 text-accent font-bold border border-accent/30 inline-flex items-center gap-1"
+                          className="px-4 py-2 rounded-full bg-accent/20 text-accent font-bold border border-accent/30"
                         >
-                          <Sparkles size={16} />
                           {winner?.name ?? id}
                         </motion.span>
                       );
@@ -404,10 +399,8 @@ export default function ImpostorGamePage() {
                     className="mb-6"
                   >
                     <div className="inline-block px-6 py-3 rounded-2xl bg-success/20 border border-success/30">
-                      <p className="text-xl text-success font-bold flex items-center justify-center gap-2">
-                        <Sparkles size={20} />
+                      <p className="text-xl text-success font-bold">
                         Você venceu!
-                        <Sparkles size={20} />
                       </p>
                     </div>
                   </motion.div>
@@ -435,10 +428,7 @@ export default function ImpostorGamePage() {
 
         {/* Players List */}
         <GlassCard className="mt-6">
-          <h3 className="text-sm font-bold text-muted mb-4 flex items-center gap-2">
-            <Users size={16} />
-            Jogadores
-          </h3>
+          <h3 className="text-sm font-bold text-muted mb-4">Jogadores</h3>
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
             {state.players.map((p) => (
               <motion.div
