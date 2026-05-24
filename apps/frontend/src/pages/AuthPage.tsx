@@ -90,7 +90,7 @@ export default function AuthPage() {
             transition={{ type: 'spring', stiffness: 200, delay: 0.1 }}
             className="mb-8"
           >
-            <h1 className="font-display text-5xl lg:text-6xl font-bold text-gradient tracking-tight pb-1 pr-2">
+            <h1 className="font-display text-5xl lg:text-6xl font-bold text-gradient tracking-tight pb-1 pr-3 inline-block">
               PastelariaGames
             </h1>
             <p className="text-muted text-lg mt-2 font-light">
