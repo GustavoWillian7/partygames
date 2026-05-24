@@ -143,7 +143,6 @@ export default function ImpostorGamePage() {
                         >
                           {state.yourWord}
                         </motion.p>
-                        <p className="text-muted text-xs mt-2">Tema: {state.yourTheme}</p>
                         <p className="text-primary text-xs mt-3 bg-primary/10 rounded-lg p-2">
                           Dê uma dica relacionada, mas não fale a palavra!
                         </p>
