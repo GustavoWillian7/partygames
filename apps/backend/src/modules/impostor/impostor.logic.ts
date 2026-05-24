@@ -115,7 +115,7 @@ export function buildGamePayload(
     activePlayerIds: string[];
     eliminatedPlayerIds: string[];
     rounds: { roundNumber: number; clues: Record<string, string>; votes: Record<string, string | null>; eliminatedId?: string; status: string }[];
-    roundTimerEndsAt?: number;
+    turnTimerEndsAt?: number;
     votingTimerEndsAt?: number;
   },
   roomPlayers: Player[]
@@ -125,8 +125,8 @@ export function buildGamePayload(
     gameType: 'impostor' as const,
     phase: game.status,
     currentRound: game.currentRound,
-    timeRemaining: game.status === 'playing' && game.roundTimerEndsAt
-      ? Math.max(0, Math.ceil((game.roundTimerEndsAt - Date.now()) / 1000))
+    timeRemaining: game.status === 'playing' && game.turnTimerEndsAt
+      ? Math.max(0, Math.ceil((game.turnTimerEndsAt - Date.now()) / 1000))
       : game.status === 'voting' && game.votingTimerEndsAt
         ? Math.max(0, Math.ceil((game.votingTimerEndsAt - Date.now()) / 1000))
         : 0,

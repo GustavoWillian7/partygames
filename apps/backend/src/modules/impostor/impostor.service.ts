@@ -13,7 +13,7 @@ import {
   shuffleTurnOrder,
 } from './impostor.logic';
 
-const ROUND_TIME_MS = 60_000;
+const TURN_TIME_MS = 60_000;
 const VOTING_TIME_MS = 30_000;
 const REVEAL_TIME_MS = 5_000;
 
@@ -76,7 +76,7 @@ export async function recoverImpostorGames(callbacksFactory: (roomId: string) =>
       // Timer já expirou — executar imediatamente
       const callbacks = callbacksFactory(game.roomId);
       if (game.status === 'playing') {
-        await impostorService.endRoundClues(game.roomId, callbacks);
+        await impostorService.endTurnClue(game.roomId, callbacks);
       } else if (game.status === 'voting') {
         await impostorService.endVoting(game.roomId, callbacks);
       }
@@ -85,7 +85,7 @@ export async function recoverImpostorGames(callbacksFactory: (roomId: string) =>
       scheduleTimer(game.roomId, remaining, () => {
         const callbacks = callbacksFactory(game.roomId);
         if (game.status === 'playing') {
-          impostorService.endRoundClues(game.roomId, callbacks);
+          impostorService.endTurnClue(game.roomId, callbacks);
         } else if (game.status === 'voting') {
           impostorService.endVoting(game.roomId, callbacks);
         }
@@ -124,7 +124,7 @@ export const impostorService = {
       activePlayerIds: activeIds,
       eliminatedPlayerIds: [],
       rounds: [round],
-      roundTimerEndsAt: Date.now() + ROUND_TIME_MS,
+      turnTimerEndsAt: Date.now() + TURN_TIME_MS,
     };
 
     await saveGame(game);
@@ -140,7 +140,7 @@ export const impostorService = {
       );
       callbacks.emitToPlayer(p.id, 'impostor:round-start', {
         round: 1,
-        timeRemaining: Math.ceil(ROUND_TIME_MS / 1000),
+        timeRemaining: Math.ceil(TURN_TIME_MS / 1000),
         yourWord: playerWord,
         yourTheme: playerTheme,
         isImpostor,
@@ -154,11 +154,11 @@ export const impostorService = {
       turnPlayerId: turnOrder[0],
     });
 
-    // Timer de rodada
-    scheduleTimer(roomId, ROUND_TIME_MS, () => {
-      this.endRoundClues(roomId, callbacks);
+    // Timer do primeiro turno
+    scheduleTimer(roomId, TURN_TIME_MS, () => {
+      this.endTurnClue(roomId, callbacks);
     });
-    await setNextAction(roomId, ROUND_TIME_MS);
+    await setNextAction(roomId, TURN_TIME_MS);
   },
 
   async sendClue(roomId: string, playerId: string, word: string, callbacks: ImpostorCallbacks): Promise<void> {
@@ -194,12 +194,6 @@ export const impostorService = {
     const players = await callbacks.getRoomPlayers(roomId);
     callbacks.emitToRoom('impostor:clue-received', { playerId, word });
 
-    // Notificar próximo jogador da vez (se houver)
-    if (nextIndex < round.turnOrder.length) {
-      const nextTurnPlayerId = round.turnOrder[nextIndex];
-      callbacks.emitToRoom('impostor:turn-changed', { turnPlayerId: nextTurnPlayerId });
-    }
-
     const remainingActive = activeIds.filter((id) => round.clues[id] === undefined);
     if (remainingActive.length === 0) {
       clearGameTimer(roomId);
@@ -208,6 +202,74 @@ export const impostorService = {
         this.endRoundClues(roomId, callbacks);
       });
       await setNextAction(roomId, 3_000);
+      return;
+    }
+
+    // Notificar próximo jogador da vez e resetar timer para ele
+    if (nextIndex < round.turnOrder.length) {
+      const nextTurnPlayerId = round.turnOrder[nextIndex];
+      game.turnTimerEndsAt = Date.now() + TURN_TIME_MS;
+      await saveGame(game);
+      callbacks.emitToRoom('impostor:turn-changed', {
+        turnPlayerId: nextTurnPlayerId,
+        timeRemaining: Math.ceil(TURN_TIME_MS / 1000),
+      });
+      scheduleTimer(roomId, TURN_TIME_MS, () => {
+        this.endTurnClue(roomId, callbacks);
+      });
+      await setNextAction(roomId, TURN_TIME_MS);
+    }
+  },
+
+  async endTurnClue(roomId: string, callbacks: ImpostorCallbacks): Promise<void> {
+    const game = await getGame(roomId);
+    if (!game || game.status !== 'playing') return;
+
+    const round = game.rounds[game.currentRound - 1];
+    const currentTurnPlayerId = round.turnOrder[round.currentTurnIndex];
+    const activeIds = game.activePlayerIds.filter((id) => !game.eliminatedPlayerIds.includes(id));
+
+    // Se o jogador da vez ainda não deu dica, registrar como pulada
+    if (currentTurnPlayerId && !round.clues[currentTurnPlayerId]) {
+      round.clues[currentTurnPlayerId] = '(pulou)';
+      callbacks.emitToRoom('impostor:clue-received', { playerId: currentTurnPlayerId, word: '(pulou)' });
+    }
+
+    // Avançar para o próximo jogador na ordem que ainda não deu dica
+    let nextIndex = round.currentTurnIndex + 1;
+    while (nextIndex < round.turnOrder.length) {
+      const nextPlayerId = round.turnOrder[nextIndex];
+      if (activeIds.includes(nextPlayerId) && round.clues[nextPlayerId] === undefined) {
+        break;
+      }
+      nextIndex++;
+    }
+    round.currentTurnIndex = nextIndex;
+    await saveGame(game);
+
+    const remainingActive = activeIds.filter((id) => round.clues[id] === undefined);
+    if (remainingActive.length === 0) {
+      clearGameTimer(roomId);
+      scheduleTimer(roomId, 3_000, () => {
+        this.endRoundClues(roomId, callbacks);
+      });
+      await setNextAction(roomId, 3_000);
+      return;
+    }
+
+    // Próximo jogador
+    if (nextIndex < round.turnOrder.length) {
+      const nextTurnPlayerId = round.turnOrder[nextIndex];
+      game.turnTimerEndsAt = Date.now() + TURN_TIME_MS;
+      await saveGame(game);
+      callbacks.emitToRoom('impostor:turn-changed', {
+        turnPlayerId: nextTurnPlayerId,
+        timeRemaining: Math.ceil(TURN_TIME_MS / 1000),
+      });
+      scheduleTimer(roomId, TURN_TIME_MS, () => {
+        this.endTurnClue(roomId, callbacks);
+      });
+      await setNextAction(roomId, TURN_TIME_MS);
     }
   },
 
@@ -313,7 +375,7 @@ export const impostorService = {
     };
     game.rounds.push(newRound);
     game.status = 'playing';
-    game.roundTimerEndsAt = Date.now() + ROUND_TIME_MS;
+    game.turnTimerEndsAt = Date.now() + TURN_TIME_MS;
     game.votingTimerEndsAt = undefined;
     await saveGame(game);
 
@@ -331,7 +393,7 @@ export const impostorService = {
       );
       callbacks.emitToPlayer(p.id, 'impostor:round-start', {
         round: game.currentRound,
-        timeRemaining: Math.ceil(ROUND_TIME_MS / 1000),
+        timeRemaining: Math.ceil(TURN_TIME_MS / 1000),
         yourWord: playerWord,
         yourTheme: playerTheme,
         isImpostor,
@@ -344,10 +406,10 @@ export const impostorService = {
       turnPlayerId: turnOrder[0],
     });
 
-    scheduleTimer(roomId, ROUND_TIME_MS, () => {
-      this.endRoundClues(roomId, callbacks);
+    scheduleTimer(roomId, TURN_TIME_MS, () => {
+      this.endTurnClue(roomId, callbacks);
     });
-    await setNextAction(roomId, ROUND_TIME_MS);
+    await setNextAction(roomId, TURN_TIME_MS);
   },
 
   async finishGame(roomId: string, winnerIds: string[], reason: string, callbacks: ImpostorCallbacks): Promise<void> {

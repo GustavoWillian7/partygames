@@ -39,6 +39,10 @@ export function useImpostorGame() {
 
   const startTimer = useCallback((seconds: number) => {
     if (timerRef.current) clearInterval(timerRef.current);
+    if (seconds <= 0) {
+      setState((prev) => ({ ...prev, timeRemaining: 0 }));
+      return;
+    }
     let remaining = seconds;
     setState((prev) => ({ ...prev, timeRemaining: remaining }));
     timerRef.current = setInterval(() => {
@@ -100,24 +104,25 @@ export function useImpostorGame() {
       setState((prev) => ({
         ...prev,
         phase: payload.phase,
-        currentRound: payload.currentRound,
+        currentRound: payload.currentRound ?? prev.currentRound,
         timeRemaining: payload.timeRemaining,
         players: payload.players,
         clues: payload.clues,
         votes: payload.votes,
         eliminatedThisRound: payload.eliminatedThisRound,
-        yourWord: payload.yourWord,
-        yourTheme: payload.yourTheme,
-        isImpostor: payload.isImpostor,
+        yourWord: payload.yourWord ?? prev.yourWord,
+        yourTheme: payload.yourTheme ?? prev.yourTheme,
+        isImpostor: payload.isImpostor ?? prev.isImpostor,
         turnPlayerId: payload.turnPlayerId ?? prev.turnPlayerId,
       }));
-      if (payload.phase === 'playing' || payload.phase === 'voting') {
+      if ((payload.phase === 'playing' || payload.phase === 'voting') && payload.timeRemaining > 0) {
         startTimer(payload.timeRemaining);
       }
     };
 
     const onRoundStart = (payload: {
-      round: number;
+      round?: number;
+      currentRound?: number;
       timeRemaining: number;
       yourWord?: string;
       yourTheme?: string;
@@ -127,7 +132,7 @@ export function useImpostorGame() {
       setState((prev) => ({
         ...prev,
         phase: 'playing',
-        currentRound: payload.round,
+        currentRound: payload.currentRound ?? payload.round ?? prev.currentRound,
         // O backend emite round-start duas vezes: individual (com seus dados)
         // e broadcast público (sem seus dados). Só sobrescrever se vier no payload.
         yourWord: payload.yourWord ?? prev.yourWord,
@@ -138,7 +143,9 @@ export function useImpostorGame() {
         votes: {},
         eliminatedThisRound: undefined,
       }));
-      startTimer(payload.timeRemaining);
+      if (payload.timeRemaining > 0) {
+        startTimer(payload.timeRemaining);
+      }
     };
 
     const onClueReceived = (payload: { playerId: string; word: string }) => {
@@ -148,11 +155,14 @@ export function useImpostorGame() {
       }));
     };
 
-    const onTurnChanged = (payload: { turnPlayerId: string }) => {
+    const onTurnChanged = (payload: { turnPlayerId: string; timeRemaining?: number }) => {
       setState((prev) => ({
         ...prev,
         turnPlayerId: payload.turnPlayerId,
       }));
+      if (payload.timeRemaining && payload.timeRemaining > 0) {
+        startTimer(payload.timeRemaining);
+      }
     };
 
     const onVotingStart = (payload: { players: { id: string; name: string }[] }) => {
@@ -233,6 +243,12 @@ export function useImpostorGame() {
     // Solicitar estado atual ao montar (útil para reconexão ou navegação tardia)
     socket.emit('impostor:request-state');
 
+    // Re-solicitar estado quando o socket reconecta (queda de rede, F5, etc.)
+    const onConnect = () => {
+      socket.emit('impostor:request-state');
+    };
+    socket.on('connect', onConnect);
+
     return () => {
       socket.off('room:game-started', onGameStarted);
       socket.off('room:state', onRoomState);
@@ -245,6 +261,7 @@ export function useImpostorGame() {
       socket.off('impostor:reveal', onReveal);
       socket.off('impostor:game-over', onGameOver);
       socket.off('error', onError);
+      socket.off('connect', onConnect);
       stopTimer();
     };
   }, [startTimer, stopTimer]);

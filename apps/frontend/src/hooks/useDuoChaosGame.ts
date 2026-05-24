@@ -35,6 +35,10 @@ export function useDuoChaosGame() {
 
   const startTimer = useCallback((seconds: number) => {
     if (timerRef.current) clearInterval(timerRef.current);
+    if (seconds <= 0) {
+      setState((prev) => ({ ...prev, timeRemaining: 0 }));
+      return;
+    }
     let remaining = seconds;
     setState((prev) => ({ ...prev, timeRemaining: remaining }));
     timerRef.current = setInterval(() => {
@@ -99,7 +103,7 @@ export function useDuoChaosGame() {
         yourTheme: payload.yourTheme ?? prev.yourTheme,
         isImpostor: payload.isImpostor ?? prev.isImpostor,
       }));
-      if (payload.phase === 'playing') {
+      if (payload.phase === 'playing' && payload.timeRemaining > 0) {
         startTimer(payload.timeRemaining);
       }
     };
@@ -121,7 +125,9 @@ export function useDuoChaosGame() {
         yourTheme: payload.yourTheme ?? prev.yourTheme,
         isImpostor: payload.isImpostor ?? prev.isImpostor,
       }));
-      startTimer(payload.timeRemaining);
+      if (payload.timeRemaining > 0) {
+        startTimer(payload.timeRemaining);
+      }
     };
 
     const onWordReceived = (payload: { playerId: string; word: string }) => {
@@ -174,6 +180,12 @@ export function useDuoChaosGame() {
 
     socket.emit('duo-chaos:request-state');
 
+    // Re-solicitar estado quando o socket reconecta (queda de rede, F5, etc.)
+    const onConnect = () => {
+      socket.emit('duo-chaos:request-state');
+    };
+    socket.on('connect', onConnect);
+
     return () => {
       socket.off('room:game-started', onGameStarted);
       socket.off('room:state', onRoomState);
@@ -183,6 +195,7 @@ export function useDuoChaosGame() {
       socket.off('duo-chaos:pair-marked', onPairMarked);
       socket.off('duo-chaos:game-over', onGameOver);
       socket.off('error', onError);
+      socket.off('connect', onConnect);
       stopTimer();
     };
   }, [startTimer, stopTimer, player?.id]);
