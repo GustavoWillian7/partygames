@@ -1,7 +1,7 @@
 # PastelariaGames — Bíblia do Projeto
 
 > Documento vivo. Atualizar a cada decisão arquitetural, mudança de stack ou novo jogo.
-> Versão: 1.5.0 — 2026-05-17
+> Versão: 1.5.1 — 2026-05-24
 
 ---
 
@@ -468,28 +468,31 @@ export interface ServerEvents {
 room:start-game (gameType: 'impostor')
     │
     ▼
-impostor:round-start (round: 1, timeRemaining, yourWord/yourTheme)
+impostor:round-start (round: 1, turnPlayerId, timeRemaining=60s, yourWord/yourTheme)
     │
-    ├──► jogador envia dica ──► impostor:send-clue (word)
-    │                              └──► broadcast impostor:clue-received
+    ├──► vez do jogador ──► impostor:send-clue (word)
+    │                        └──► broadcast impostor:clue-received
+    │                        └──► broadcast impostor:turn-changed (nextPlayer, timeRemaining=60s)
     │
-    ▼ (após todas as dicas ou timeout)
-impostor:voting-start (lista de jogadores)
+    │    (se timeout de 60s) ──► auto-pula jogador ──► impostor:turn-changed
+    │
+    ▼ (após todos darem dica ou timeout)
+impostor:voting-start (lista de jogadores, timeRemaining=30s)
     │
     ├──► jogador vota ──► impostor:vote (votedPlayerId | null)
     │                        └──► broadcast impostor:vote-received
     │
-    ▼ (após todos votarem ou timeout)
+    ▼ (após todos votarem ou timeout de 30s)
 impostor:reveal (eliminado, era impostor?, lista de impostores)
     │
-    ├──► Se jogo continua ──► impostor:round-start (round: 2 ...)
+    ├──► Se jogo continua ──► impostor:round-start (round: 2, novo turnPlayerId, timeRemaining=60s)
     │
     └──► Se jogo acaba ──► impostor:game-over (winnerIds, reason)
 ```
 
 **Regras de negócio**:
-- O impostor recebe `yourTheme`. Os inocentes recebem `yourWord`.
-- Cada jogador deve dar exatamente 1 palavra por rodada.
+- O impostor recebe `yourTheme` e **não** recebe a palavra secreta. Os inocentes recebem `yourWord` mas **não** veem o tema (somente na fase de revelação final).
+- Cada jogador tem **60s por turno** para dar 1 palavra. O timer reseta a cada jogador (não é compartilhado entre todos).
 - Voto nulo é permitido (`votedPlayerId: null`).
 - O mais votado é eliminado. Empate = ninguém eliminado.
 - O jogo termina quando todos os impostores são eliminados (vitória inocente) ou quando inocentes = impostores (vitória impostor).
@@ -685,7 +688,7 @@ colors: {
 
 ---
 
-## 12. Estado Atual & Bloqueios Conhecidos (2026-05-17)
+## 12. Estado Atual & Bloqueios Conhecidos (2026-05-24)
 
 | Item | Status | Detalhe |
 |------|--------|---------|
@@ -711,6 +714,12 @@ colors: {
 | Impostor recebe tema | ✅ Corrigido (v1.3) | Adicionado `isImpostor` ao tipo `ServerEvents` do Socket.io (`impostor:round-start` e `impostor:state`). Agora o frontend identifica corretamente quem é impostor e mostra o tema |
 | Marcar dupla só após 1 rodada | ✅ Corrigido (v1.3) | No Duo Chaos, `markPair` agora verifica se todos os jogadores falaram pelo menos 1 palavra (`chatHistory` tem entrada de cada `activePlayerId`). Se não, retorna erro "Aguarde todos os jogadores falarem pelo menos 1 vez" |
 | Grupos de temas | ✅ Implementado (v1.4) | Host pode escolher um grupo de temas no lobby (`themeGroup` em `RoomSettings`). O sorteio de palavras filtra pelo grupo escolhido. 14 grupos disponíveis com ~22 entradas cada. Fallback para "Aleatório" se nenhum grupo for selecionado |
+| Timer por turno (Impostor) | ✅ Corrigido (v1.5) | Antes o timer de 60s era compartilhado entre todos os jogadores da rodada. Agora cada jogador tem 60s individuais por turno. Se não responder, auto-pula com `(pulou)`. Evento `impostor:turn-changed` agora inclui `timeRemaining` |
+| Badge de rodada vazia | ✅ Corrigido (v1.5) | Na 2ª rodada do Impostor, a badge exibia apenas "Rodada" sem número porque o payload broadcast usava `currentRound` e o frontend só lia `round`. Agora aceita ambos os campos |
+| Timer travado no frontend | ✅ Corrigido (v1.5) | `startTimer` agora ignora valores `<= 0`. Eventos `onState`/`onRoundStart` só reiniciam o timer quando `timeRemaining > 0`, evitando travamento visual |
+| Reconexão resincroniza estado | ✅ Corrigido (v1.5) | Após F5 ou queda de conexão, o frontend agora escuta `socket.on('connect')` e re-emite `*:request-state` automaticamente, restaurando palavra, tema e vez do jogador |
+| Inocentes não veem tema | ✅ Corrigido (v1.5) | No Impostor, inocentes recebem `yourWord` mas não veem `yourTheme` na UI. Apenas impostores visualizam o tema para poder dar dicas coerentes |
+| Tela bugada após refresh | ✅ Corrigido (v1.5) | Ambos os jogos (Impostor e Duo Chaos) agora re-solicitam estado do servidor ao reconectar, evitando a tela com "???" para palavra/tema/vez |
 
 ### Próximo passo recomendado
 1. Adicionar testes de integração automatizados (jest + socket.io-client) para regressão futura.
@@ -718,4 +727,4 @@ colors: {
 
 ---
 
-*Última atualização: 2026-05-17 (v1.4 — sistema de grupos de temas, expansão do banco de palavras para 14 grupos com ~22 entradas cada, atualização do briefing)*
+*Última atualização: 2026-05-24 (v1.5 — timer individual por turno no Impostor, sincronização de estado pós-reconexão, fixes de UI/UX no auth e visibilidade de tema)*
