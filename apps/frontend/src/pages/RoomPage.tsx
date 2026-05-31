@@ -144,6 +144,15 @@ export default function RoomPage() {
     }
   }, [currentRoom?.id]);
 
+  // Emitir room:leave ao fechar aba intencionalmente
+  useEffect(() => {
+    const onBeforeUnload = () => {
+      getSocket().emit('room:leave');
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, []);
+
   const handleLeave = async () => {
     isLeavingRef.current = true;
     await leaveRoomAndWait();

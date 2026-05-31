@@ -35,10 +35,20 @@ export function registerSocketEvents(io: SocketServer) {
     }
 
     socket.data.playerId = playerId;
+
+    // Verificar sessão única (login único)
+    const sessionKey = `auth:session:${playerId}`;
+    const existingSession = await redis.get(sessionKey);
+    if (existingSession && existingSession !== (token ?? '1')) {
+      socket.emit('error', { code: 'AUTH_ERROR', message: 'Esta conta já está em uso em outro dispositivo' });
+      socket.disconnect(true);
+      return;
+    }
+
     registerSocket(playerId, socket);
 
     // Atualizar sessão ativa no Redis (para rastreamento de login único)
-    await redis.set(`auth:session:${playerId}`, token ?? '1', 'EX', SESSION_TTL_SECONDS);
+    await redis.set(sessionKey, token ?? '1', 'EX', SESSION_TTL_SECONDS);
 
     // Attempt reconnection
     const { room, player, reconnected } = await roomService.handleReconnect(playerId, socket.id);

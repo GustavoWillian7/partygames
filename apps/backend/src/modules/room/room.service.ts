@@ -128,6 +128,18 @@ export const roomService = {
     const room = await getRoomById(roomId);
     if (!room) throw new Error('Room not found');
 
+    const kicked = await redis.get(`room:kick:${roomId}:${player.id}`);
+    if (kicked) throw new Error('You were removed from this room');
+
+    // Se sala estava em jogo mas o jogo já acabou no Redis, resetar para lobby
+    if (room.status === 'playing') {
+      const gameExists = await redis.exists(`game:${roomId}`);
+      if (gameExists === 0) {
+        room.status = 'waiting';
+        room.currentGame = undefined;
+      }
+    }
+
     const existingPlayer = room.players.find((p) => p.id === player.id);
     if (existingPlayer) {
       // Jogador já está na sala — atualizar socket e status (reconexão/refresh)
@@ -198,6 +210,7 @@ export const roomService = {
 
     clearReconnectTimer(playerId);
     await redis.del(`playerRoom:${playerId}`);
+    await redis.setex(`room:kick:${roomId}:${playerId}`, 30, '1');
 
     if (room.players.length === 0) {
       scheduleRoomDeletion(roomId);
@@ -235,7 +248,7 @@ export const roomService = {
     if (room.hostId !== hostId) throw new Error('Only host can start the game');
     if (room.status === 'playing') throw new Error('Game already in progress');
 
-    const activePlayers = room.players.filter((p) => p.status !== 'spectator');
+    const activePlayers = room.players.filter((p) => p.status !== 'spectator' && p.status !== 'disconnected');
     if (activePlayers.length < MIN_PLAYERS_TO_START) {
       throw new Error(`Need at least ${MIN_PLAYERS_TO_START} players to start`);
     }
@@ -265,8 +278,12 @@ export const roomService = {
     const player = room.players.find((p) => p.id === playerId);
     if (!player) return { room, player: undefined };
 
+    // Race condition fix: if player already reconnected with a different socket, ignore this disconnect
+    if (player.socketId !== socketId) {
+      return { room, player: undefined };
+    }
+
     player.status = 'disconnected';
-    player.socketId = socketId; // keep last socket id for reference
     await saveRoom(room);
 
     if (room.settings.allowReconnection) {

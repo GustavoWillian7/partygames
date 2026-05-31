@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
@@ -9,7 +9,7 @@ import {
 } from 'lucide-react';
 import { useDuoChaosGame } from '../hooks/useDuoChaosGame';
 import { useRoomStore } from '../store/useRoomStore';
-import { leaveRoomAndWait } from '../socket/socketManager';
+import { leaveRoomAndWait, getSocket } from '../socket/socketManager';
 import GlassCard from '../components/ui/GlassCard';
 import NeonButton from '../components/ui/NeonButton';
 import GlowInput from '../components/ui/GlowInput';
@@ -20,6 +20,15 @@ export default function DuoChaosGamePage() {
   const { currentRoom, clearRoom } = useRoomStore();
   const navigate = useNavigate();
   const [wordInput, setWordInput] = useState('');
+
+  // Emitir room:leave ao fechar aba intencionalmente
+  useEffect(() => {
+    const onBeforeUnload = () => {
+      getSocket().emit('room:leave');
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, []);
 
   const currentTurnPlayer = state.players.find((p) => p.id === state.turnPlayerId);
 

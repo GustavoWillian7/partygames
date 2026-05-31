@@ -8,7 +8,7 @@ import {
 import { useImpostorGame } from '../hooks/useImpostorGame';
 import { useAuthStore } from '../store/useAuthStore';
 import { useRoomStore } from '../store/useRoomStore';
-import { leaveRoomAndWait } from '../socket/socketManager';
+import { leaveRoomAndWait, getSocket } from '../socket/socketManager';
 import GlassCard from '../components/ui/GlassCard';
 import NeonButton from '../components/ui/NeonButton';
 import GlowInput from '../components/ui/GlowInput';
@@ -28,6 +28,15 @@ export default function ImpostorGamePage() {
       setHasVoted(false);
     }
   }, [state.phase]);
+
+  // Emitir room:leave ao fechar aba intencionalmente
+  useEffect(() => {
+    const onBeforeUnload = () => {
+      getSocket().emit('room:leave');
+    };
+    window.addEventListener('beforeunload', onBeforeUnload);
+    return () => window.removeEventListener('beforeunload', onBeforeUnload);
+  }, []);
 
   const activePlayers = state.players.filter((p) => !p.isEliminated);
   const eliminatedPlayer = state.players.find((p) => p.id === state.eliminatedThisRound);

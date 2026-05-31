@@ -91,7 +91,9 @@ export const authService = {
     });
 
     const player = mapUserToProfile(user);
-    return { player, token: generateToken(id) };
+    const token = generateToken(id);
+    await redis.set(`auth:session:${id}`, token, 'EX', SESSION_TTL_SECONDS);
+    return { player, token };
   },
 
   async clearSession(playerId: string) {

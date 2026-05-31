@@ -26,6 +26,14 @@ export function getSocket(): Socket<ServerEvents, ClientEvents> {
     socket.on('connect_error', (err) => {
       console.error('[Socket] Connect error:', err.message);
     });
+    socket.on('error', (payload: { code: string; message: string }) => {
+      if (payload.code === 'AUTH_ERROR') {
+        localStorage.removeItem('token');
+        localStorage.removeItem('player');
+        disconnectSocket();
+        window.location.href = '/auth';
+      }
+    });
   }
   return socket;
 }
@@ -55,6 +63,14 @@ export function connectSocket(token: string | null): Socket<ServerEvents, Client
   });
 
   return s;
+}
+
+export function ensureSocketConnected(): Socket<ServerEvents, ClientEvents> {
+  const token = localStorage.getItem('token');
+  if (token) {
+    return connectSocket(token);
+  }
+  return getSocket();
 }
 
 export function disconnectSocket(): void {

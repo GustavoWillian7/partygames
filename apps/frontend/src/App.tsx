@@ -1,3 +1,4 @@
+import { useEffect } from 'react';
 import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AnimatePresence, motion } from 'framer-motion';
 import Layout from './components/layout/Layout';
@@ -6,6 +7,7 @@ import HomePage from './pages/HomePage';
 import RoomPage from './pages/RoomPage';
 import ImpostorGamePage from './pages/ImpostorGamePage';
 import DuoChaosGamePage from './pages/DuoChaosGamePage';
+import { ensureSocketConnected } from './socket/socketManager';
 
 const pageVariants = {
   initial: { opacity: 0, y: 12, scale: 0.98 },
@@ -46,6 +48,10 @@ function AnimatedRoutes() {
 }
 
 function App() {
+  useEffect(() => {
+    ensureSocketConnected();
+  }, []);
+
   return (
     <BrowserRouter>
       <Layout>
